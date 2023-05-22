@@ -71,7 +71,7 @@ class RNN_stack(nn.Module):
         self.afunc = nn.LeakyReLU()
 
 
-    def forward(self, data, hs=None, classify_in_time=False, savetime=False):
+    def forward(self, data, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
         '''
         input: data [batch_size, sequence length, input_features]
         output:
@@ -82,6 +82,8 @@ class RNN_stack(nn.Module):
                     shape=[batch_size, self.num_classes],
                 or if classify_in_time == True:
                     shape=[time, batch_size, self.num_classes]
+        index_in_head: if we want to have faster evaluation,
+            we can pass the index of the head that we want to return
         '''
         if hs is None:
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
@@ -127,10 +129,16 @@ class RNN_stack(nn.Module):
                 # hs_t.append([h.detach().to('cpu') for h in hs])
                 hs_t.append([h.clone() for h in hs])
             if classify_in_time:
-                out.append( [self.fc[i](hs[-1]) for i in range(self.num_readout_heads)] )
+                if index_in_head is None:
+                    out.append([self.fc[i](hs[-1]) for i in range(self.num_readout_heads)])
+                else:
+                    out.append([self.fc[index_in_head](hs[-1])])
 
         if not classify_in_time:
-            out = [self.fc[i](hs[-1]) for i in range(self.num_readout_heads)]
+            if index_in_head is None:
+                out = [self.fc[i](hs[-1]) for i in range(self.num_readout_heads)]
+            else:
+                out = [self.fc[index_in_head](hs[-1])]
 
         if savetime:
             return hs_t, out
