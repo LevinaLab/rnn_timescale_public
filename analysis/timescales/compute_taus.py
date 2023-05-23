@@ -19,7 +19,7 @@ The saved pickle file includes a dictionary contaning:
 import torch
 import numpy as np
 
-from time_scales_utils import comp_acs
+from timescales_utils import comp_acs
 
 #---------------- setting the parallel threads on CPU for numpy and torch
 import os
