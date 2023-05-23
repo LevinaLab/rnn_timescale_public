@@ -1,10 +1,10 @@
 import torch
 import os
-from src.models.RNN_Stack import init_model
+from src.models import init_model
 
 
 def load_model(
-        curriculum_type: str, task: str, network_number: int, N_max: int, N_min: int = 2, device="cpu", base_path="./models"
+        curriculum_type: str, task: str, network_number: int, N_max: int, N_min: int = 2, device="cpu", base_path="./trained_models", strict=False
 ):
     """Load the RNNs for the given type and network_name.
 
@@ -24,6 +24,6 @@ def load_model(
         f'rnn_N{N_min:d}_N{N_max:d}',
     )
     rnn = init_model()
-    rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'])
+    rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'], strict = strict)
     return rnn
 
