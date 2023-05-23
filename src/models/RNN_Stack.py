@@ -5,7 +5,8 @@ import torch.nn.functional as F
 import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-class RNN_stack(nn.Module):
+
+class RNN_Stack(nn.Module):
     '''
     Custom RNN class so that we can make RNNs with layers with different sizes,
     and also to save hidden_layer states through time.
