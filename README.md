@@ -1,6 +1,6 @@
 # Check Your Timescales: Single-Neuron and Network-Mediated Mechanisms in Recurrent Networks for Long Memory Tasks
 
-Codes for implementation of the NeurIPS 2023 submission titled "Check Your Timescales: Single-Neuron and Network-Mediated Mechanisms in Recurrent Networks for Long Memory Tasks".
+Codes for the implementation of the NeurIPS 2023 submission titled "Check Your Timescales: Single-Neuron and Network-Mediated Mechanisms in Recurrent Networks for Long Memory Tasks".
 
 
 
@@ -23,6 +23,7 @@ Codes for running different analysis on trained networks. It includes:
 - Measuring $\tau$ and $\tau_{net}$
 - Measuring dimensionality of population activity using PCA
 - Running ablation and perturbation analysis
+
 More details are provided in the README inside the "analysis" folder.
 
 
