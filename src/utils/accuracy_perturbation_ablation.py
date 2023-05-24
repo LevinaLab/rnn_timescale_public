@@ -54,13 +54,12 @@ def calculate_accuracy(
             N_max=N,
             base_path=base_path,
         )
-        match network_type:
-            case 'single':
-                index_in_head = 0
-            case 'cumulative':
-                index_in_head = N - 2
-            case _:
-                raise NotImplementedError
+        if network_type == 'single':
+            index_in_head = 0
+        elif network_type == 'cumulative':
+            index_in_head = N - 2
+        else:
+            raise NotImplementedError
     except FileNotFoundError as e:
         print(f"FileNotFoundError: {network_type}, network: {network_name}, {N}, {str(e)}")
         return None
@@ -75,49 +74,48 @@ def calculate_accuracy(
 def perturb_network_(rnn, perturbation_type, perturbation):
     rnn = copy.deepcopy(rnn)
     with torch.no_grad():
-        match perturbation_type:
-            case 'multiplicative rnn':
-                if perturbation > 0:
-                    rnn.w_hh[0].weight *= 1 + perturbation * torch.rand_like(rnn.w_hh[0].weight)
-            case 'normalized rnn':
-                # https://proceedings.neurips.cc/paper/2020/file/1ef91c212e30e14bf125e9374262401f-Paper.pdf
-                # equation (5)
-                if perturbation > 0:
-                    direction = torch.randn_like(rnn.w_hh[0].weight)
-                    direction_norm = torch.linalg.norm(direction, ord='fro')
-                    weight_norm = torch.linalg.norm(rnn.w_hh[0].weight, ord='fro')
-                    rnn.w_hh[0].weight += perturbation / direction_norm * weight_norm * direction
-            case 'additive tau':
-                if perturbation > 0:
-                    rnn.taus[0] += perturbation * torch.randn_like(rnn.taus[0])
-            case 'normalized tau':
-                # https://proceedings.neurips.cc/paper/2020/file/1ef91c212e30e14bf125e9374262401f-Paper.pdf
-                # equation (5)
-                if perturbation > 0:
-                    direction = torch.randn_like(rnn.taus[0])
-                    direction_norm = torch.linalg.norm(direction)
-                    tau_norm = torch.linalg.norm(rnn.taus[0])
-                    rnn.taus[0] += perturbation / direction_norm * tau_norm * direction
-            case 'normalized tau abs':
-                # https://proceedings.neurips.cc/paper/2020/file/1ef91c212e30e14bf125e9374262401f-Paper.pdf
-                # equation (5)
-                if perturbation > 0:
-                    direction = torch.abs(torch.randn_like(rnn.taus[0]))
-                    direction_norm = torch.linalg.norm(direction)
-                    tau_norm = torch.linalg.norm(rnn.taus[0])
-                    rnn.taus[0] += perturbation / direction_norm * tau_norm * direction
+        if perturbation_type == 'multiplicative rnn':
+            if perturbation > 0:
+                rnn.w_hh[0].weight *= 1 + perturbation * torch.rand_like(rnn.w_hh[0].weight)
+        elif perturbation_type == 'normalized rnn':
+            # https://proceedings.neurips.cc/paper/2020/file/1ef91c212e30e14bf125e9374262401f-Paper.pdf
+            # equation (5)
+            if perturbation > 0:
+                direction = torch.randn_like(rnn.w_hh[0].weight)
+                direction_norm = torch.linalg.norm(direction, ord='fro')
+                weight_norm = torch.linalg.norm(rnn.w_hh[0].weight, ord='fro')
+                rnn.w_hh[0].weight += perturbation / direction_norm * weight_norm * direction
+        elif perturbation_type == 'additive tau':
+            if perturbation > 0:
+                rnn.taus[0] += perturbation * torch.randn_like(rnn.taus[0])
+        elif perturbation_type == 'normalized tau':
+            # https://proceedings.neurips.cc/paper/2020/file/1ef91c212e30e14bf125e9374262401f-Paper.pdf
+            # equation (5)
+            if perturbation > 0:
+                direction = torch.randn_like(rnn.taus[0])
+                direction_norm = torch.linalg.norm(direction)
+                tau_norm = torch.linalg.norm(rnn.taus[0])
+                rnn.taus[0] += perturbation / direction_norm * tau_norm * direction
+        elif perturbation_type == 'normalized tau abs':
+            # https://proceedings.neurips.cc/paper/2020/file/1ef91c212e30e14bf125e9374262401f-Paper.pdf
+            # equation (5)
+            if perturbation > 0:
+                direction = torch.abs(torch.randn_like(rnn.taus[0]))
+                direction_norm = torch.linalg.norm(direction)
+                tau_norm = torch.linalg.norm(rnn.taus[0])
+                rnn.taus[0] += perturbation / direction_norm * tau_norm * direction
 
-            case 'ablation':
-                if perturbation > -1:
-                    for idx in [perturbation] if isinstance(perturbation, (int, np.integer)) else perturbation:
-                        rnn.w_hh[0].weight.data[idx, :] = 0
-                        rnn.w_hh[0].weight.data[:, idx] = 0
-                        rnn.fc[0].weight.data[:, idx] = 0
-                        rnn.input_layers[0].weight.data[idx, :] = 0
-            case 'ablation readout':
-                if perturbation > -1:
-                    for idx in [perturbation] if isinstance(perturbation, (int, np.integer)) else perturbation:
-                        rnn.fc[0].weight.data[:, idx] = 0
+        elif perturbation_type == 'ablation':
+            if perturbation > -1:
+                for idx in [perturbation] if isinstance(perturbation, (int, np.integer)) else perturbation:
+                    rnn.w_hh[0].weight.data[idx, :] = 0
+                    rnn.w_hh[0].weight.data[:, idx] = 0
+                    rnn.fc[0].weight.data[:, idx] = 0
+                    rnn.input_layers[0].weight.data[idx, :] = 0
+        elif perturbation_type == 'ablation readout':
+            if perturbation > -1:
+                for idx in [perturbation] if isinstance(perturbation, (int, np.integer)) else perturbation:
+                    rnn.fc[0].weight.data[:, idx] = 0
     return rnn
 
 
@@ -132,17 +130,16 @@ def calculate_accuracy_(
             _, outputs = rnn(inputs, classify_in_time=True, index_in_head=index_in_head)
         outputs = torch.vstack([o[0] for o in outputs])[warmup_length:].detach().numpy()
         outputs_predict = (outputs[:, 0] < outputs[:, 1]) * 1
-    match trained_task:
-        case 'parity':
-            inputs_cumsum = inputs.detach().numpy().flatten().cumsum(-1)
-            partial_sums = inputs_cumsum[warmup_length:] - inputs_cumsum[warmup_length - N:-N]
-            outputs_correct = (partial_sums % 2)
-            accuracy = (outputs_predict == outputs_correct).mean()
-            return accuracy
-        case 'dms':
-            inputs_detach = inputs.detach().numpy().flatten()
-            inputs_match = inputs_detach[warmup_length:] == inputs_detach[warmup_length - N + 1:-N +1]
-            accuracy = (outputs_predict == inputs_match).mean()
-            return accuracy
-        case _:
-            raise ValueError(f'Unknown task: {trained_task}')
+    if trained_task == 'parity':
+        inputs_cumsum = inputs.detach().numpy().flatten().cumsum(-1)
+        partial_sums = inputs_cumsum[warmup_length:] - inputs_cumsum[warmup_length - N:-N]
+        outputs_correct = (partial_sums % 2)
+        accuracy = (outputs_predict == outputs_correct).mean()
+        return accuracy
+    elif trained_task == 'dms':
+        inputs_detach = inputs.detach().numpy().flatten()
+        inputs_match = inputs_detach[warmup_length:] == inputs_detach[warmup_length - N + 1:-N +1]
+        accuracy = (outputs_predict == inputs_match).mean()
+        return accuracy
+    else:
+        raise ValueError(f'Unknown task: {trained_task}')
