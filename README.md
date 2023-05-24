@@ -10,6 +10,11 @@ Codes for the implementation of the NeurIPS 2023 submission titled "Check Your T
 - Numpy: 1.21.5 
 - Scipy: 1.7.3
 - Scikit-Learn: 1.1.3
+- Pandas: 1.4.3
+
+### Visualization
+- Matplotlib: 3.5.1
+- Seaborn: 0.11.2
 
 
 ## Training
