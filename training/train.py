@@ -49,8 +49,7 @@ def train(model,
             # Backward and optimize
             loss = 0.
             for N_i in range(len(Ns)):
-                head_idx = N_i
-                loss += CRITERION(out_class[head_idx], labels[head_idx])
+                loss += CRITERION(out_class[N_i], labels[N_i])
             loss.backward()
             losses_step.append(loss.item())
             # gradient clipping
@@ -195,7 +194,7 @@ if __name__ == '__main__':
     NET_SIZE = [500]
     NUM_CLASSES = 2
     BIAS = True
-    NUM_READOUT_HEADS = 10
+    NUM_READOUT_HEADS = 100
     TRAIN_TAU = True
 
     # TRAINING PARAMS
