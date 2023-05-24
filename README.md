@@ -30,6 +30,10 @@ The script accepts the following arguments:
     -fh, --forget_heads int: Number of heads to forget for the sliding window curriculum type.
     -s, --seed int: Set the random seed.
 
+For example
+
+```python train.py -c cumulative -t parity -s 0```
+
 If an argument is not provided, the script uses the following default values:
 
     curriculum_type: cumulative
@@ -58,17 +62,21 @@ The results of the analysis are saved in `./results`.
 
 ## Example trained models
 Example trained models are saved in the `./trained_models` directory.
+All example models are trained with ```-seed 0```.
 
 The naming convention for the saved models is:
-`{curriculum_type}_{task}_network_{network_number}/rnn_N{N_min}_N{N_max}`.
+`{curriculum_type}_{task}_network_{network_number}/rnn_N{N_min}_N{N_max}`. 
+
 
 To load a model, import the ```load_model``` function ```from src.utils import load_model```
 which takes the following arguments
 
-        curriculum_type (str): 'cumulative', f'sliding_{n_heads}_{n_forget}', 'single'
-        task (str): 'parity' or 'dms'
-        network_number (int): 1, 2, 3, ...
-        N_max (int): N that the network should be able to solve (N_max = N_min for curriculum_type='single')
-        N_min (int): minimum N, potentially depending on curriculum_type
+    curriculum_type (str): 'cumulative' (a.k.a. multi-head)
+                            f'sliding_{n_heads}_{n_forget}' (a.k.a. multi-head sliding)
+                            'single' (a.k.a single-head)
+    task (str): 'parity' or 'dms'
+    network_number (int): 1, 2, 3, ...
+    N_max (int): N that the network should be able to solve (N_max = N_min for curriculum_type='single')
+    N_min (int): minimum N, potentially depending on curriculum_type
 
 For example: ```load_model('cumulative', 'parity', 1, 2, 50)```
