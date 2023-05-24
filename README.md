@@ -61,7 +61,7 @@ Example trained models are saved in the `./trained_models` directory.
 The naming convention for the saved models is:
 `{curriculum_type}_{task}_network_{network_number}/rnn_N{N_min}_N{N_max}`.
 
-To load a model, simply ```from src.utils import load_model```
+To load a model, import the ```load_model``` function ```from src.utils import load_model```
 which takes the following arguments
 
         curriculum_type (str): 'cumulative', f'sliding_{n_heads}_{n_forget}', 'single'
