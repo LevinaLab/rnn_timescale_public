@@ -28,6 +28,7 @@ The script accepts the following arguments:
     -ih, --init_heads int: Number of heads to start with.
     -dh, --add_heads int: Number of heads to add per new curricula.
     -fh, --forget_heads int: Number of heads to forget for the sliding window curriculum type.
+    -s, --seed int: Set the random seed.
 
 If an argument is not provided, the script uses the following default values:
 
@@ -37,6 +38,7 @@ If an argument is not provided, the script uses the following default values:
     init_heads: 1
     add_heads: 1
     forget_heads: 1
+    seed: np.random.choice(2 ** 32)
 
 Models are saved in the `./trained_models` directory where models trained above 98% accuracy are saved as the curriculum grows.
 ## Evaluation
