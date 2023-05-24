@@ -18,7 +18,7 @@ Codes for the implementation of the NeurIPS 2023 submission titled "Check Your T
 
 
 ## Training
-To train a model, run ```./training/train.py```.
+To train a model, run, `cd ./training` `python train.py --{args}`.
 The script accepts the following arguments:
 
     -h, --help: Show the help message and exit.
@@ -38,7 +38,7 @@ If an argument is not provided, the script uses the following default values:
     add_heads: 1
     forget_heads: 1
 
-Models are saved in the ```./trained_models``` directory where models trained above 98% accuracy are saved as the curriculum grows.
+Models are saved in the `./trained_models` directory where models trained above 98% accuracy are saved as the curriculum grows.
 ## Evaluation
 
 
@@ -48,7 +48,22 @@ Codes for running different analysis on trained networks. It includes:
 - Measuring dimensionality of population activity using PCA
 - Running ablation and perturbation analysis
 
-More details are provided in the README inside the "analysis" folder.
+More details are provided in the README inside `./analysis`.
+
+The results of the analysis are saved in `./results`. 
 
 
 ## Example trained models
+Example trained models are saved in the `./trained_models` directory.
+
+The naming convention for the saved models is:
+`{curriculum_type}_{task}_network_{network_number}/rnn_N{N_min}_N{N_max}`.
+
+To load a model, simply ```from src.utils import load_model```
+which takes the following arguments
+
+        curriculum_type (str): 'cumulative', f'sliding_{n_heads}_{n_forget}', 'single'
+        task (str): 'parity' or 'dms'
+        network_number (int): 1, 2, 3, ...
+        N_max (int): N that the network should be able to solve (N_max = N_min for curriculum_type='single')
+        N_min (int): minimum N, potentially depending on curriculum_type 

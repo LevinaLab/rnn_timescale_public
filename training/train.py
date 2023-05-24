@@ -1,15 +1,15 @@
+import sys
+sys.path.insert(0, '../')
 import torch
 import torch.nn as nn
 
 import numpy as np
-import sys
 import argparse
 from tqdm import tqdm
 
 from src.models import RNN_Stack
 import src.tasks as tasks
 from src.utils import save_model
-
 
 def train(model,
           curriculum_type,
@@ -134,6 +134,8 @@ if __name__ == '__main__':
                         help='Number of heads to add per new curricula.')
     parser.add_argument('-fh', '--forget_heads', type=int, dest='forget_heads',
                         help='Number of heads to forget for the sliding window curriculum type.')
+    parser.add_argument('-s', '--seed', type=int, dest='seed',
+                        help='Random seed.')
 
     parser.set_defaults(curriculum_type='cumulative',
                         task='parity',
@@ -141,6 +143,7 @@ if __name__ == '__main__':
                         init_heads=1,
                         add_heads=1,
                         forget_heads=1,
+                        seed=np.random.choice(2 ** 32)
                         )
 
     # Parse the command-line arguments
@@ -160,6 +163,10 @@ if __name__ == '__main__':
     NUM_ADD = args.add_heads  # how many heads/tasks to add per new curricula (only relevant for cumulative curriculum)
     NUM_FORGET = args.forget_heads  # how many heads to forget per new curricula (only relevant for sliding curriculum)
 
+    SEED = args.seed
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
+    np.random.seed(SEED)
     # Figure out which task
     if TASK == 'parity':
         task_function = tasks.make_batch_Nbit_pair_parity
