@@ -38,7 +38,7 @@ If an argument is not provided, the script uses the following default values:
     add_heads: 1
     forget_heads: 1
 
-Models are saved in the ```./trained_folders``` directory where models trained above 98% accuracy are saved as the curriculum grows.
+Models are saved in the ```./trained_models``` directory where models trained above 98% accuracy are saved as the curriculum grows.
 ## Evaluation
 
 

@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from src.models import RNN_Stack
 import src.tasks as tasks
-import src.utils as utils
+from src.utils import save_model
 
 
 def train(model,
@@ -23,23 +23,23 @@ def train(model,
     accuracies = []
 
     # save init
-    subdir = utils.save_model(model,
-                              curriculum_type=curriculum_type,
-                              n_heads=len(Ns),
-                              n_forget=NUM_FORGET,
-                              task=task,
-                              network_number=run_number,
-                              N_max=Ns[-1],
-                              N_min=Ns[0],
-                              init=True
-                              )
+    subdir = save_model(model,
+                        curriculum_type=curriculum_type,
+                        n_heads=len(Ns),
+                        n_forget=NUM_FORGET,
+                        task=task,
+                        network_number=run_number,
+                        N_max=Ns[-1],
+                        N_min=Ns[0],
+                        init=True
+                      )
 
     # Train the model
     for epoch in tqdm(range(num_epochs)):
         losses_step = []
         for i in range(TRAINING_STEPS):
             OPTIMIZER.zero_grad()
-            sequences, labels = tasks.make_batch_multihead_dms(Ns, BATCH_SIZE)
+            sequences, labels = task_function(Ns, BATCH_SIZE)
             sequences = sequences.permute(1, 0, 2).to(device)
             labels = [l.to(device) for l in labels]
 
@@ -63,7 +63,7 @@ def train(model,
         total = 0
         for j in range(TEST_STEPS):
             with torch.no_grad():
-                sequences, labels = tasks.make_batch_multihead_dms(Ns, BATCH_SIZE)
+                sequences, labels = task_function(Ns, BATCH_SIZE)
                 sequences = sequences.permute(1, 0, 2).to(device)
                 labels = [l.to(device) for l in labels]
 
@@ -90,15 +90,15 @@ def train(model,
         if np.mean(accuracy) > 98.:
             if accuracy[-1] > 98.:
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
-                utils.save_model(model,
-                                 curriculum_type=curriculum_type,
-                                 n_heads=len(Ns),
-                                 n_forget=NUM_FORGET,
-                                 task=task,
-                                 network_number=run_number,
-                                 N_max=Ns[-1],
-                                 N_min=Ns[0]
-                                 )
+                save_model(model,
+                           curriculum_type=curriculum_type,
+                           n_heads=len(Ns),
+                           n_forget=NUM_FORGET,
+                           task=task,
+                           network_number=run_number,
+                           N_max=Ns[-1],
+                           N_min=Ns[0]
+                           )
 
                 if curriculum_type == 'cumulative':
                     Ns = Ns + [Ns[-1] + 1 + i for i in range(NUM_ADD)]
