@@ -47,7 +47,7 @@ If an argument is not provided, the script uses the following default values:
 Models are saved in the `./trained_models` directory where models trained above 98% accuracy are saved as the curriculum grows.
 ## Evaluation
 To load and test a trained model, you can run the Jupyter Notebook `./training/eval.ipynb` to load
-and example and evaluate it on the task it was trained on. 
+an example model and evaluate it on the task it was trained on. 
 
 ## Analysis
 Codes for running different analysis on trained networks. It includes:
