@@ -68,4 +68,6 @@ which takes the following arguments
         task (str): 'parity' or 'dms'
         network_number (int): 1, 2, 3, ...
         N_max (int): N that the network should be able to solve (N_max = N_min for curriculum_type='single')
-        N_min (int): minimum N, potentially depending on curriculum_type 
+        N_min (int): minimum N, potentially depending on curriculum_type
+
+For example: ```load_model('cumulative', 'parity', 1, 2, 50)```
