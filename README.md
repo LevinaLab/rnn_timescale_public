@@ -5,8 +5,8 @@ Codes for the implementation of the NeurIPS 2023 submission titled "Check Your T
 
 
 ## Requirements
-- Python: 
-- PyTorch:
+- Python: 3.7.13
+- PyTorch: 1.3.1
 - Numpy: 1.21.5 
 - Scipy: 1.7.3
 - Scikit-Learn: 1.1.3
