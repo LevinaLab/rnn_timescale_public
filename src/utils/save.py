@@ -11,6 +11,7 @@ def save_model(
         N_max: int,
         N_min: int = 2,
         base_path="../trained_models",
+        affixes=[],
         init=False
 ):
 
@@ -27,17 +28,22 @@ def save_model(
         network_number: 1, 2, 3, ...
         N_max: N that the network should be able to solve
         N_min: minimum N, potentially depending on curriculum_type
+        affixes: a list of strings to append to the directory name
         init: If True, saves with a different file name to show this is before training.
     """
+    affix_str = '_'
+    if len(affixes) > 0:
+        affix_str += '_'.join(affixes) + '_'
+
     if curriculum_type == 'sliding':
         rnn_subdir = os.path.join(
             base_path,
-            f'{curriculum_type}_{n_heads}_{n_forget}_{task}_network_{network_number}'
+            f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
         )
     else:
         rnn_subdir = os.path.join(
             base_path,
-            f'{curriculum_type}_{task}_network_{network_number}'
+            f'{curriculum_type}_{task}{affix_str}network_{network_number}'
         )
     if init:
         rnn_name = f'rnn_init'
