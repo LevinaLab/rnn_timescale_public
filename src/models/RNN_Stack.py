@@ -154,7 +154,7 @@ def init_model(
     BIAS=True,
     NUM_READOUT_HEADS=100,
     TRAIN_TAU=True,
-    device='cpu',
+    DEVICE='cpu',
 ):
     # init new model
     rnn = RNN_Stack(input_size=INPUT_SIZE,
@@ -164,6 +164,6 @@ def init_model(
                     num_readout_heads=NUM_READOUT_HEADS,
                     tau=1.,
                     train_tau=TRAIN_TAU
-                    ).to(device)
+                    ).to(DEVICE)
 
     return rnn

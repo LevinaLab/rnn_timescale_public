@@ -155,7 +155,7 @@ def init_model_mod(
     NUM_READOUT_HEADS=100,
     A_FUNC=nn.LeakyReLU,
     TRAIN_TAU=True,
-    device='cpu',
+    DEVICE='cpu',
 ):
     # init new model
     rnn = RNN_Mod(input_size=INPUT_SIZE,
@@ -166,6 +166,6 @@ def init_model_mod(
                   tau=1.,
                   afunc=A_FUNC,
                   train_tau=TRAIN_TAU
-                  ).to(device)
+                  ).to(DEVICE)
 
     return rnn
