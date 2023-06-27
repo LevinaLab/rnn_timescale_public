@@ -151,9 +151,9 @@ if __name__ == '__main__':
                         help='Number of heads to add per new curricula.')
     parser.add_argument('-fh', '--forget_heads', type=int, dest='forget_heads',
                         help='Number of heads to forget for the sliding window curriculum type.')
-    parser.add_argument('-ns', '--net_size', type=List[int], dest='net_size',
+    parser.add_argument('-ns', '--net_size', type=str, dest='net_size',
                         help='Size of the hidden layers.')
-    parser.add_argument('-aff', '--affixes', type=List[str], dest='affixes',
+    parser.add_argument('-aff', '--affixes', type=str, dest='affixes',
                         help='Affixes for the savefile.')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed.')
@@ -166,8 +166,8 @@ if __name__ == '__main__':
                         init_heads=1,
                         add_heads=1,
                         forget_heads=1,
-                        net_size=[500],
-                        affixes=[],
+                        net_size='500',
+                        affixes='',
                         seed=np.random.choice(2 ** 32)
                         )
 
@@ -191,9 +191,9 @@ if __name__ == '__main__':
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
     NUM_ADD = args.add_heads  # how many heads/tasks to add per new curricula (only relevant for cumulative curriculum)
     NUM_FORGET = args.forget_heads  # how many heads to forget per new curricula (only relevant for sliding curriculum)
-    NET_SIZE = args.net_size  # size of hidden layers
+    NET_SIZE = [int(size) for size in args.net_size.split(',')]  # size of hidden layers
 
-    AFFIXES = args.affixes
+    AFFIXES = [] if args.affixes == '' else args.affixes.split(',')
     if not NET_SIZE == [500]:
         if len(NET_SIZE) == 1:
             AFFIXES.append('net_size_' + str(NET_SIZE[0]))
