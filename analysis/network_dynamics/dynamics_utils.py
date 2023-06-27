@@ -95,7 +95,7 @@ def make_binary_data(model, M, BATCH_SIZE, NET_SIZE):
 
 
         
-def comp_pca(data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_explained_variance, burn_T):
+def comp_pca(data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_explained_variance, burn_T, strict=False, mod_model=False, mod_afunc=torch.nn.LeakyReLU):
     """ Loads the network for each N, simulates it for T time-steps, computes PC components, 
     returns explained variance for each components and dimensionality of RNN dynamics.
        
@@ -124,6 +124,12 @@ def comp_pca(data_path, save_path, curriculum_type, task, network_number, N_max_
         maximum explained variance for computing dimensionality
     burn_T: int
         burn-in time at the beginning of each simulation to reach stationary state.
+    strict: boolean
+        aurgument for loading models (depends on python version)
+    mod_model: boolean
+        'modified model or default model', if true, tau is outside non-linearity.
+    mod_afunc: 
+        type of non-linearity
         
         
     Returns
@@ -155,7 +161,7 @@ def comp_pca(data_path, save_path, curriculum_type, task, network_number, N_max_
     
         # loading the model
         print('N = ', N)
-        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, base_path = data_path)
+        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc)
         trained_taus = rnn.taus[0].detach().numpy() # trained taus
             
         # simulating the model activity using random binary inputs

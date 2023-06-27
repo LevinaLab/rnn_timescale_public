@@ -20,7 +20,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
 os.environ["NUMEXPR_NUM_THREADS"] = "2"
 torch.set_num_threads(10)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 #---------------- data and network params
 
@@ -43,4 +43,4 @@ max_explained_variance = .9
 
 
 # ------------- PCA computation
-explained_variance_all, dimensionality_all = comp_pca(data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_explained_variance, burn_T)
+explained_variance_all, dimensionality_all = comp_pca(device, data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_explained_variance, burn_T)

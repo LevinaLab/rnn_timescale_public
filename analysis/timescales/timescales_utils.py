@@ -235,7 +235,7 @@ def model_comp(ac, lags, min_lag, max_lag):
 
 
         
-def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_lag, fit_lag, burn_T):
+def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_lag, fit_lag, burn_T, strict=False, mod_model=False, mod_afunc=torch.nn.LeakyReLU):
     """ Loads the network for each N, 
     simulates it for T time-steps, computes single-neuron and population activity autocorrelations,
     estimates timescales and saves the results in a pickle file. 
@@ -278,9 +278,14 @@ def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_
         maximum time-lag for fitting ACs (we choose a small number to avoid AC bias)
     burn_T: int
         burn-in time at the beginning of each simulation to reach stationary state.
+    strict: boolean
+        aurgument for loading models (depends on python version)
+    mod_model: boolean
+        'modified model or default model', if true, tau is outside non-linearity.
+    mod_afunc: 
+        type of non-linearity
     
     """
-
 
     
     min_lag = 0
@@ -305,7 +310,7 @@ def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_
     
         # loading the model
         print('N = ', N)
-        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, base_path = data_path)
+        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc)
         trained_taus = rnn.taus[0].detach().numpy() # trained taus
             
         # simulating the model activity using random binary inputs
