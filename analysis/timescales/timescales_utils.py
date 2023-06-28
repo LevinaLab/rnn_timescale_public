@@ -235,7 +235,7 @@ def model_comp(ac, lags, min_lag, max_lag):
 
 
         
-def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_lag, fit_lag, burn_T, strict=False, mod_model=False, mod_afunc=torch.nn.LeakyReLU):
+def comp_acs(device, data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_lag, fit_lag, burn_T, strict=False, mod_model=False, mod_afunc=torch.nn.LeakyReLU, affixes=[]):
     """ Loads the network for each N, 
     simulates it for T time-steps, computes single-neuron and population activity autocorrelations,
     estimates timescales and saves the results in a pickle file. 
@@ -254,6 +254,8 @@ def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_
 
     Parameters
     -----------
+    device: str
+        'cuda' or 'cpu'
     data_path : str
         path to network data with different N.
     save_path : string
@@ -310,7 +312,7 @@ def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_
     
         # loading the model
         print('N = ', N)
-        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc)
+        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc, affixes = affixes)
         trained_taus = rnn.taus[0].detach().numpy() # trained taus
             
         # simulating the model activity using random binary inputs
@@ -346,10 +348,14 @@ def comp_acs(data_path, save_path, curriculum_type, task, network_number, N_max_
             else:
                 tau_net_all[j] = np.nan
             
-            
+        
+        affix_str = '_'
+        if len(affixes) > 0:
+            affix_str += '_'.join(affixes) + '_'
+        
         ## making a dictionay and saving as a pickle object
         model_name = os.path.join(
-        f'{curriculum_type}_{task}_network_{network_number}')
+        f'{curriculum_type}_{task}{affix_str}_network_{network_number}')
         save_data = {'ac_pop': ac_pop, 'ac_all': ac_all_single, 'taus_net': tau_net_all,'selected_models':selected_model_all, 'taus_trained': trained_taus, 'max_fit_lag': fit_lag, 'duration': T-burn_T, 'trials': num_trials}
         with open(save_path + model_name +'_N'+str(N) + '_acs_taus.pkl', 'wb') as f:
             pickle.dump(save_data, f)
