@@ -1,6 +1,5 @@
 import sys
 import os
-from typing import List
 
 # Get the absolute path of the parent directory of 'src'
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
