@@ -355,7 +355,7 @@ def comp_acs(device, data_path, save_path, curriculum_type, task, network_number
         
         ## making a dictionay and saving as a pickle object
         model_name = os.path.join(
-        f'{curriculum_type}_{task}{affix_str}_network_{network_number}')
+        f'{curriculum_type}_{task}{affix_str}network_{network_number}')
         save_data = {'ac_pop': ac_pop, 'ac_all': ac_all_single, 'taus_net': tau_net_all,'selected_models':selected_model_all, 'taus_trained': trained_taus, 'max_fit_lag': fit_lag, 'duration': T-burn_T, 'trials': num_trials}
         with open(save_path + model_name +'_N'+str(N) + '_acs_taus.pkl', 'wb') as f:
             pickle.dump(save_data, f)
