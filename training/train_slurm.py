@@ -177,6 +177,7 @@ if __name__ == '__main__':
     print('network number:', args.network_number)
 
     BASE_PATH = args.base_path
+    AFFIXES = []
 
     # USER ARGUMENTS (curriculum type/task and related params)
     MODEL = args.model_type
@@ -184,6 +185,8 @@ if __name__ == '__main__':
     CURRICULUM = args.curriculum_type
     TASK = args.task
     DUPLICATE = args.duplicate
+    if DUPLICATE > 1:
+        AFFIXES.append(f'duplicate{DUPLICATE}')
     NETWORK_NUMBER = args.network_number
 
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
@@ -238,8 +241,7 @@ if __name__ == '__main__':
 
     # init new model
     if MODEL == 'mod':
-
-        AFFIXES = ['mod', AFUNC]
+        AFFIXES += ['mod', AFUNC]
 
         if AFUNC == 'leakyrelu':
             AFUNC = nn.LeakyReLU
@@ -264,9 +266,6 @@ if __name__ == '__main__':
 
         rnn.to(device)
     elif MODEL == 'default':
-
-        AFFIXES = []
-
         rnn = RNN_Stack(input_size=INPUT_SIZE,
                         net_size=NET_SIZE,
                         num_classes=NUM_CLASSES,
