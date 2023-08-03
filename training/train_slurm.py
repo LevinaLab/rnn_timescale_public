@@ -1,3 +1,4 @@
+import functools
 import sys
 import os
 
@@ -152,6 +153,8 @@ if __name__ == '__main__':
                         help='Number of heads to forget for the sliding window curriculum type.')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed.')
+    parser.add_argument('-dup', '--duplicate', type=int, dest='duplicate',
+                        help='Time discretization: duplicate samples this many times.')
 
     parser.set_defaults(model_type='default',
                         afunc='leakyrelu',
@@ -161,7 +164,8 @@ if __name__ == '__main__':
                         init_heads=1,
                         add_heads=1,
                         forget_heads=1,
-                        seed=np.random.choice(2 ** 32)
+                        seed=np.random.choice(2 ** 32),
+                        duplicate=1,
                         )
 
     # Parse the command-line arguments
@@ -179,6 +183,7 @@ if __name__ == '__main__':
     AFUNC = args.afunc
     CURRICULUM = args.curriculum_type
     TASK = args.task
+    DUPLICATE = args.duplicate
     NETWORK_NUMBER = args.network_number
 
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
@@ -191,7 +196,10 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     # Figure out which task
     if TASK == 'parity':
-        task_function = tasks.make_batch_Nbit_pair_parity
+        if DUPLICATE > 1:
+            task_function = functools.partial(tasks.make_batch_Nbit_pair_parity, duplicate=DUPLICATE)
+        else:
+            task_function = tasks.make_batch_Nbit_pair_parity
     elif TASK == 'dms':
         task_function = tasks.make_batch_multihead_dms
     else:
