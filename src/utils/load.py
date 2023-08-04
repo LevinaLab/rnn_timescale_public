@@ -36,15 +36,9 @@ def load_model(
         affix_str += '_'.join(affixes) + '_'
     
     if curriculum_type == 'sliding':
-        rnn_subdir = os.path.join(
-            base_path,
-            f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
-        )
+        rnn_subdir = f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
     else:
-        rnn_subdir = os.path.join(
-            base_path,
-            f'{curriculum_type}_{task}{affix_str}network_{network_number}'
-        )
+        rnn_subdir = f'{curriculum_type}_{task}{affix_str}network_{network_number}'
     
     rnn_path = os.path.join(
         base_path,
