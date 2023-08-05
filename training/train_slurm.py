@@ -155,6 +155,8 @@ if __name__ == '__main__':
                         help='Random seed.')
     parser.add_argument('-dup', '--duplicate', type=int, dest='duplicate',
                         help='Time discretization: duplicate samples this many times.')
+    parser.add_argument('-it', '--init_tau', type=float, dest='init_tau',
+                        help='Initial value of tau.')
 
     parser.set_defaults(model_type='default',
                         afunc='leakyrelu',
@@ -166,6 +168,7 @@ if __name__ == '__main__':
                         forget_heads=1,
                         seed=np.random.choice(2 ** 32),
                         duplicate=1,
+                        init_tau=None,
                         )
 
     # Parse the command-line arguments
@@ -187,6 +190,9 @@ if __name__ == '__main__':
     DUPLICATE = args.duplicate
     if DUPLICATE > 1:
         AFFIXES.append(f'duplicate{DUPLICATE}')
+    INIT_TAU = args.init_tau
+    if INIT_TAU is not None:
+        AFFIXES.append(f'tau{INIT_TAU}')
     NETWORK_NUMBER = args.network_number
 
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
@@ -263,7 +269,8 @@ if __name__ == '__main__':
                         afunc=AFUNC,
                         train_tau=TRAIN_TAU
                         ).to(device)
-
+        if INIT_TAU is not None:
+            raise NotImplementedError('Init tau not implemented for mod model.')
         rnn.to(device)
     elif MODEL == 'default':
         rnn = RNN_Stack(input_size=INPUT_SIZE,
@@ -272,7 +279,8 @@ if __name__ == '__main__':
                         bias=BIAS,
                         num_readout_heads=NUM_READOUT_HEADS,
                         tau=1.,
-                        train_tau=TRAIN_TAU
+                        train_tau=TRAIN_TAU,
+                        init_tau=INIT_TAU,
                         ).to(device)
 
         rnn.to(device)
