@@ -26,7 +26,7 @@ def get_parity(vec, N):
     # return (vec[-N:].sum() % 2).long()
 
 
-device = 'cpu'  # 'cuda'
+device = 'cuda'
 
 class LSTM_custom(nn.Module):
     '''
