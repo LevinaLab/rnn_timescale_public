@@ -92,7 +92,10 @@ class LSTM_custom(nn.Module):
 
 
 def _save_lstm(lstm, base_path, n_max, network_number, n_min=2, init=False):
-    lstm_subdir = os.path.join(base_path, f'lstm_network_{network_number}')
+    lstm_subdir = os.path.join(
+        base_path,
+        f'lstm_{CURRICULUM}_network_{network_number}',
+    )
     if init:
         rnn_name = f'lstm_init'
     else:
@@ -220,12 +223,12 @@ def train(num_epochs, model, Ns, network_number):
                 _save_lstm(model, BASE_PATH, Ns[-1], network_number, init=False)
 
                 # append new curriculum
-                # multi-head
-                Ns = Ns + [Ns[-1] + 1 + i for i in range(NHEADS)]
-
-                # single-head
-                # Ns = [Ns[-1] + 1]
-
+                if CURRICULUM == 'cumulative':
+                    Ns = Ns + [Ns[-1] + 1 + i for i in range(NHEADS)]
+                elif CURRICULUM == 'single':
+                    Ns = [Ns[-1] + 1]
+                else:
+                    raise NotImplementedError
                 M_MIN = Ns[-1] + 2
                 M_MAX = M_MIN + 3 * Ns[-1]
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
@@ -245,7 +248,15 @@ if __name__ == '__main__':
                         help='The base path to save results.')
     parser.add_argument('-n', '--network_number', type=int, dest='network_number',
                         help='The run number of the network, to be used as a naming suffix for savefiles.')
+    parser.add_argument('-c', '--curriculum_type', type=str, dest='curriculum_type',
+                        help='Curriculum type: (cumulative, sliding, single)')
+
+    parser.set_defaults(
+        curriculum_type='cumulative',
+    )
+
     args = parser.parse_args()
 
     BASE_PATH = args.base_path
+    CURRICULUM = args.curriculum_type
     train(num_epochs=100, model=lstm, Ns=[2], network_number=args.network_number)
