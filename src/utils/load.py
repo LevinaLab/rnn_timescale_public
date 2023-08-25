@@ -15,7 +15,7 @@ def load_model(
         strict=False,
         mod_model=False,
         mod_afunc=nn.LeakyReLU,
-        affixes = []
+        affixes=[],
 ):
     """Load the RNNs for the given type and network_name.
 

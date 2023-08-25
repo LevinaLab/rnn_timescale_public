@@ -29,7 +29,13 @@ def _get_mean_std_tau(
 
     return np.mean(taus), np.std(taus)
 
-
+taus_from_duplicate = {
+    1: [None],
+    2: [None, 1.75, 2, 2.25, 2.5],
+    3: [None, 2, 2.75, 3, 3.25, 4],
+    5: [None, 4, 4.75, 5, 5.25, 6],
+    10: [None, 8, 9.75, 10, 10.25, 12],
+}
 duplicate_list = [1, 2, 3, 5, 10]
 N_list = list(range(2, 101))
 for curriculum_type in ['cumulative', 'single']:
@@ -37,7 +43,7 @@ for curriculum_type in ['cumulative', 'single']:
     fig.suptitle(f'{curriculum_type}')
     for i_duplicate, duplicate in enumerate(duplicate_list):
         for network_number in [1, 2]:
-            for tau in [None, duplicate]:
+            for tau in taus_from_duplicate[duplicate]:  # [None, duplicate, duplicate + 0.25, duplicate - 0.25]:
                 tau_mean = np.zeros(len(N_list))
                 tau_std = np.zeros(len(N_list))
                 for i_N, N in enumerate(N_list):
@@ -84,31 +90,3 @@ for curriculum_type in ['cumulative', 'single']:
     )
 
     fig.show()
-
-"""duplicate_list = [1, 2, 3, 5, 10]
-N_list = list(range(2, 101))
-tau_means = np.zeros((len(duplicate_list), len(N_list)))
-tau_stds = np.zeros((len(duplicate_list), len(N_list)))
-for curriculum_type in ['cumulative', 'single']:
-    fig, axs = plt.subplots(ncols=2, constrained_layout=True)
-    fig.suptitle(f'{curriculum_type}')
-    for i_duplicate, duplicate in enumerate(duplicate_list):
-        for i_N, N in enumerate(N_list):
-            try:
-                tau_means[i_duplicate, i_N], tau_stds[i_duplicate, i_N] = _get_mean_std_tau(
-                    N,
-                    duplicate=duplicate,
-                    curriculum_type=curriculum_type,
-                    tau=duplicate if duplicate > 1 else None,
-                )
-            except FileNotFoundError:
-                break
-        axs[0].plot(N_list[:i_N], tau_means[i_duplicate, :i_N], label=f'duplicate = {duplicate}')
-        axs[1].plot(N_list[:i_N], tau_stds[i_duplicate, :i_N], label=f'duplicate = {duplicate}')
-    for ax in axs:
-        ax.set_xlabel('N')
-        ax.set_ylabel('tau')
-        ax.legend()
-    axs[0].set_title('mean tau')
-    axs[1].set_title('std tau')
-    fig.show()"""
