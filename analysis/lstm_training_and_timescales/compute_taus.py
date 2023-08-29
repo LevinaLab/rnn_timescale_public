@@ -42,8 +42,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # data_path = '../../trained_models/single_nocurr/N5' # path to trained networks
 save_path = '../../results/' # path for saving the results
 
-curriculum_type = 'single'
-task = 'nocurr_parity_mod_relu'
+# curriculum_type = 'single'
+# task = 'nocurr_parity_mod_relu'
 # network_number = 0
 # N_max_max = 5
 # N_max_range = np.arange(N_max_max, N_max_max+1, 1) # range of maximum Ns
@@ -52,13 +52,13 @@ num_neurons = 500
 
 # -------------- AC computation params
 burn_T = 500 # Burn-in time at the beginning of each simulation to reach stationary state
-T = 10**5 + 500 + burn_T # number of time steps for simulations
+T = 5*10**4 + 500 + burn_T # number of time steps for simulations
 num_trials = 10 # number of simulated trials
 max_lag = 200 # maximum time lag for saving ACs
 fit_lag = 30  # maximum time-lag for fitting ACs (we choose a small number to avoid AC bias)
 
 
-def _comp_acs_lstm(base_path, N_max_range, network_number):
+def _comp_acs_lstm(base_path, N_max_range, network_number, curriculum_type):
     """ Loads the network for each N,
     simulates it for T time-steps, computes single-neuron and population activity autocorrelations,
     estimates timescales and saves the results in a pickle file.
@@ -123,7 +123,7 @@ def _comp_acs_lstm(base_path, N_max_range, network_number):
 
         # loading the model
         print('N = ', N)
-        lstm = load_lstm(base_path, N, network_number, n_min=2)
+        lstm = load_lstm(base_path, N, network_number, curriculum_type, n_min=2)
 
         # trained_taus = rnn.taus[0].detach().numpy()  # trained taus
 
@@ -182,7 +182,7 @@ def _comp_acs_lstm(base_path, N_max_range, network_number):
 
         # making a dictionay and saving as a pickle object
         model_name = os.path.join(
-            f'lstm_network_{network_number}')
+            f'lstm_{curriculum_type}_network_{network_number}')
         save_data = {
             'ac_pop': ac_pop,
             'ac_all': ac_all_single,
@@ -202,14 +202,19 @@ def _comp_acs_lstm(base_path, N_max_range, network_number):
 
 
 do_test = False
+do_cumulative = False
+
+curriculum_type = 'cumulative' if do_cumulative else 'single'
+
 if do_test:
     _comp_acs_lstm(
         base_path='../../trained_models',
         N_max_range=np.arange(20, 21),
         network_number=1,
+        curriculum_type='cumulative',
     )
 else:
-    N_max_range = np.arange(3, 100, 5) # range of maximum Ns
+    N_max_range = np.arange(2, 100, 5) # range of maximum Ns
     for network_number in range(1, 5):
         print('network number = ', network_number)
         data_path = '../../trained_models'
@@ -218,6 +223,7 @@ else:
                 base_path=data_path,
                 N_max_range=N_max_range,
                 network_number=network_number,
+                curriculum_type=curriculum_type,
             )
         except FileNotFoundError:
             continue

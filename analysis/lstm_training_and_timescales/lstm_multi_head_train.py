@@ -6,25 +6,7 @@ import torch.nn as nn
 
 import numpy as np
 
-
-def generate_binary_sequence(M):
-    # return (torch.rand(M) < torch.rand(1)) * 1.
-    return ((torch.rand(M) < 0.5) * 1.)*2 - 1
-
-
-def make_batch_Nbit_pair_parity(Ns, M, bs):
-    with torch.no_grad():
-        sequences = [generate_binary_sequence(M).unsqueeze(-1) for i in range(bs)]
-
-        labels = [torch.stack([get_parity(s, N) for s in sequences]) for N in Ns]
-
-    return torch.stack(sequences), labels
-
-
-def get_parity(vec, N):
-    return  (((vec + 1)/2)[-N:].sum() % 2).long()
-    # return (vec[-N:].sum() % 2).long()
-
+from analysis.lstm_training_and_timescales.lstm_utils import make_batch_Nbit_pair_parity
 
 device = 'cuda'
 
