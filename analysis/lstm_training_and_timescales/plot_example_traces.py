@@ -19,7 +19,7 @@ plot_time = np.arange(plot_start, plot_end)
 plot_cells = np.arange(0, 10)
 
 lstm = load_lstm(base_path, N, network_number, curriculum_type, n_min=2)
-plot_cells = np.argpartition(lstm.fc[20].weight.detach().numpy()[0, :], -10)[-10:]
+# plot_cells = np.argpartition(lstm.fc[20].weight.detach().numpy()[0, :], -10)[-10:]
 
 inputs, labels = make_batch_Nbit_pair_parity(np.arange(2, 102), simulation_time, 1)
 with torch.no_grad():

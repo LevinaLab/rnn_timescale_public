@@ -22,13 +22,18 @@ def _load_saved_ac(base_path, network_number, n_max, curriculum_type):
     return data['ac_all']
 
 
+curriculum_type = 'cumulative'
+n_max = 57
+
 fig, ax = plt.subplots(1, 1, figsize=(6, 4), constrained_layout=True)
+sns.despine()
+fig.suptitle(f'Curriculum: {curriculum_type}, N_max = {n_max}')
 ax.set_yscale('log')
 ac_all = _load_saved_ac(
     base_path='../../results',
     network_number=1,
-    n_max=8,
-    curriculum_type='single',
+    n_max=n_max,
+    curriculum_type=curriculum_type,
 )
 ax.plot(ac_all[:, :].T)
 fig.show()
