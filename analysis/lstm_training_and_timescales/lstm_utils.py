@@ -121,12 +121,12 @@ class LSTM_custom(nn.Module):
                         self.lstm.bias_ih_l0[3 * self.hidden_size:4 * self.hidden_size] +
                         self.lstm.bias_hh_l0[3 * self.hidden_size:4 * self.hidden_size]
                     )
-                output_single, (h_0, c_0) = self.lstm(data[:, t, :].unsqueeze(1), (h0, c0))
+                output_single, (h0, c0) = self.lstm(data[:, t, :].unsqueeze(1), (h0, c0))
                 output[:, t, :] = output_single[:, 0, :]
                 if save_hidden_states is True:
-                    hidden_states[:, t, :] = h_0[0]
+                    hidden_states[:, t, :] = h0[0]
                 if save_cell_states is True:
-                    cell_states[:, t, :] = c_0[0]
+                    cell_states[:, t, :] = c0[0]
 
         else:
             output, (h_n, c_n) = self.lstm(data, (h0, c0))
