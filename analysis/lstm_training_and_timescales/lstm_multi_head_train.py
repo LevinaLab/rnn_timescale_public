@@ -120,10 +120,10 @@ criterion = nn.CrossEntropyLoss()
 
 
 # set the forget gate params to 1. to NOT forget stuff at first
-lstm.lstm.weight_ih_l0.data[NET_SIZE:NET_SIZE*2, :] = torch.ones_like(lstm.lstm.weight_ih_l0.data[NET_SIZE:NET_SIZE*2, :])
-lstm.lstm.weight_hh_l0.data[NET_SIZE:NET_SIZE*2, :] = torch.ones_like(lstm.lstm.weight_hh_l0.data[NET_SIZE:NET_SIZE*2, :])
-lstm.lstm.bias_ih_l0.data[NET_SIZE:NET_SIZE*2] = torch.ones_like(lstm.lstm.bias_ih_l0.data[NET_SIZE:NET_SIZE*2])
-lstm.lstm.bias_hh_l0.data[NET_SIZE:NET_SIZE*2] = torch.ones_like(lstm.lstm.bias_hh_l0.data[NET_SIZE:NET_SIZE*2])
+# lstm.lstm.weight_ih_l0.data[NET_SIZE:NET_SIZE*2, :] = torch.ones_like(lstm.lstm.weight_ih_l0.data[NET_SIZE:NET_SIZE*2, :])
+# lstm.lstm.weight_hh_l0.data[NET_SIZE:NET_SIZE*2, :] = torch.ones_like(lstm.lstm.weight_hh_l0.data[NET_SIZE:NET_SIZE*2, :])
+# lstm.lstm.bias_ih_l0.data[NET_SIZE:NET_SIZE*2] = torch.ones_like(lstm.lstm.bias_ih_l0.data[NET_SIZE:NET_SIZE*2])
+# lstm.lstm.bias_hh_l0.data[NET_SIZE:NET_SIZE*2] = torch.ones_like(lstm.lstm.bias_hh_l0.data[NET_SIZE:NET_SIZE*2])
 
 lstm.lstm.flatten_parameters()
 
