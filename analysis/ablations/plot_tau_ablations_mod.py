@@ -78,4 +78,4 @@ for ax in axs:
 for i_ax, ax in enumerate(axs.flatten()):
     ax.text(-0.10, 1.05, ['a', 'b', 'c', 'd'][i_ax], color='k', fontsize=11, weight='bold', transform=ax.transAxes)
 fig.show()
-# fig.savefig('fig/exp110_plot_tau_ablations.pdf')
+# fig.savefig('../../fig/exp110_plot_tau_ablations_mod.pdf')
