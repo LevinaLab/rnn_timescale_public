@@ -1,5 +1,12 @@
 import argparse
 import os
+import sys
+
+# Get the absolute path of the parent directory of 'src'
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Add both the parent directory and the 'src' directory to the module search path
+sys.path.insert(0, parent_dir)
+sys.path.insert(0, os.path.join(parent_dir, 'src'))
 
 import torch
 import torch.nn as nn
