@@ -3,7 +3,7 @@ import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 
-from analysis.lstm_training_and_timescales.lstm_utils import load_lstm, make_batch_Nbit_pair_parity
+from src.lstm_utils import load_lstm, make_batch_Nbit_pair_parity
 
 base_path = '../../trained_models'
 N = 60

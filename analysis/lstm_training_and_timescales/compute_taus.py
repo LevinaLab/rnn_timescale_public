@@ -25,8 +25,8 @@ from tqdm import tqdm
 #---------------- setting the parallel threads on CPU for numpy and torch
 import os
 
-from analysis.lstm_training_and_timescales.lstm_utils import load_lstm, simulate_lstm_binary
-from analysis.timescales.timescales_utils import make_binary_data, comp_ac_fft, model_comp
+from src.lstm_utils import load_lstm, simulate_lstm_binary
+from analysis.timescales.timescales_utils import comp_ac_fft, model_comp
 
 os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["OPENBLAS_NUM_THREADS"] = "2" 
