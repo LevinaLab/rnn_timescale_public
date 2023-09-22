@@ -7,7 +7,7 @@ from src.lstm_utils import load_lstm, make_batch_Nbit_pair_parity
 
 base_path = '../../trained_models'
 N = 60
-network_number = 1
+network_number = 51
 curriculum_type = 'cumulative'
 
 simulation_time = 1000

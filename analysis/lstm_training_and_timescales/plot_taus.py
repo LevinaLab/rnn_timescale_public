@@ -54,7 +54,7 @@ for curriculum_type in ['single', 'cumulative']:
     fig, axs = plt.subplots(1, 2, figsize=(6, 4), constrained_layout=True)
     sns.despine()
     fig.suptitle(f'Curriculum type: {curriculum_type}')
-    for network_number in range(1, 5):
+    for network_number in range(51, 55):
         n_max_range, taus_net_all, taus_forget_all = _load_saved_tau_for_n_max_range(
             base_path='../../results',
             network_number=network_number,

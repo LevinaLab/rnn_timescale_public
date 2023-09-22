@@ -203,6 +203,7 @@ def _comp_acs_lstm(base_path, N_max_range, network_number, curriculum_type):
 
 do_test = False
 do_cumulative = False
+network_numbers = range(51, 55)
 
 curriculum_type = 'cumulative' if do_cumulative else 'single'
 
@@ -215,7 +216,7 @@ if do_test:
     )
 else:
     N_max_range = np.arange(2, 100, 5) # range of maximum Ns
-    for network_number in range(1, 5):
+    for network_number in network_numbers:
         print('network number = ', network_number)
         data_path = '../../trained_models'
         try:

@@ -55,8 +55,8 @@ for curriculum_type in ['single', 'cumulative']:
     fig, axs = plt.subplots(1, 2, figsize=(6, 4), constrained_layout=True)
     sns.despine()
     fig.suptitle(f'Curriculum type: {curriculum_type}')
-    tau_forget_all_zero_max = 1
-    for network_number in range(1, 5):
+    # tau_forget_all_zero_max = 1
+    for network_number in range(51, 55):
         n_max_range = np.arange(2, 100)  #, 5)
         tau_forget_all = []
         n_max_tau_forget = []
@@ -89,14 +89,13 @@ for curriculum_type in ['single', 'cumulative']:
         bias_forget_all = [_forget_gate_bias_to_tau(b).mean() for b in bias_forget_all]
 
         axs[0].plot(n_max_tau_forget, tau_forget_all, color=f'C{network_number}', label=f'{network_number}')
-        if tau_forget_all[0] > tau_forget_all_zero_max:
-            tau_forget_all_zero_max = tau_forget_all[0]
+        # if tau_forget_all[0] > tau_forget_all_zero_max:
+        #     tau_forget_all_zero_max = tau_forget_all[0]
         axs[1].plot(n_max_bias_forget, bias_forget_all, color=f'C{network_number}', label=f'{network_number}')
     axs[0].set_xlabel('N_max')
-    axs[0].set_ylim([0.9, tau_forget_all_zero_max])
+    # axs[0].set_ylim([0.9, tau_forget_all_zero_max])
     axs[0].set_ylabel('Tau from simulation')
     axs[1].set_xlabel('N_max')
     axs[1].set_ylabel('Tau from bias')
     axs[1].legend(title="Network", frameon=False, loc='upper left', bbox_to_anchor=(1.05, 1.0))
     plt.show()
-
