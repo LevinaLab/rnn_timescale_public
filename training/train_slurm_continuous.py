@@ -278,6 +278,32 @@ if __name__ == '__main__':
     momentum = 0.1
     OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
 
+    # print values of global variables
+    print('BASE_PATH: ', BASE_PATH)
+    print('AFFIXES: ', AFFIXES)
+    print('AFUNC: ', AFUNC)
+    print('CURRICULUM: ', CURRICULUM)
+    print('TASK: ', TASK)
+    print('DUPLICATES: ', DUPLICATES)
+    print('INIT_TAU: ', INIT_TAU)
+    print('NETWORK_NUMBER: ', NETWORK_NUMBER)
+    print('INIT_HEADS: ', INIT_HEADS)
+    print('NUM_ADD: ', NUM_ADD)
+    print('NUM_FORGET: ', NUM_FORGET)
+    print('SEED: ', SEED)
+    print('INPUT_SIZE: ', INPUT_SIZE)
+    print('NET_SIZE: ', NET_SIZE)
+    print('NUM_CLASSES: ', NUM_CLASSES)
+    print('BIAS: ', BIAS)
+    print('NUM_READOUT_HEADS: ', NUM_READOUT_HEADS)
+    print('TRAIN_TAU: ', TRAIN_TAU)
+    print('NUM_EPOCHS: ', NUM_EPOCHS)
+    print('BATCH_SIZE: ', BATCH_SIZE)
+    print('TRAINING_STEPS: ', TRAINING_STEPS)
+    print('TEST_STEPS: ', TEST_STEPS)
+    print('CRITERION: ', CRITERION)
+    print('device: ', device)
+
     # Train the model
     stats = _train(
         rnn,

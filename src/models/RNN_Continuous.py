@@ -110,16 +110,13 @@ class RNN_Continuous(nn.Module):
         for i in range(len(self.net_size)):
             self.w_hh[i].weight.data.fill_diagonal_(0.)
 
-        # actual taus
-        taus = self.taus * k_data
-
         for t in range(data.size(0)):
             inp = x[t, ...]
             for i in range(len(self.net_size)):
 
                 if self.train_tau:
-                    # with training taus
-                    taus = torch.clamp(taus[i], min=1.)
+                    # with training taus rescaled by k_data
+                    taus = torch.clamp(self.taus[i] * k_data, min=1.)
                     if i == 0:
                         hs[i] = ((1 - 1/taus) * hs[i]
                                  + self.afunc(self.w_hh[i](hs[i]) + inp) / taus)
@@ -128,9 +125,9 @@ class RNN_Continuous(nn.Module):
                                  + self.afunc(self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) + inp) / taus)
 
                 else:
-                    # with fixed tau
+                    # with fixed tau rescaled by k_data
                     if i == 0:
-                        hs[i] = ((1 - 1/(taus[i])) * hs[i]
+                        hs[i] = ((1 - 1/(self.taus[i] * k_data)) * hs[i]
                                  + self.afunc(self.w_hh[i](hs[i]) + inp) / taus[i])
                     else:
                         hs[i] = ((1 - 1/taus[i]) * hs[i]
