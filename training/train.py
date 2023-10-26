@@ -56,6 +56,7 @@ def train(model,
             # Backward and optimize
             loss = 0.
             for N_i in range(len(Ns)):
+                # forward pass for all N_i, requires custom forward pass, that takes as input number of N's you actually have this far into the encephalization.
                 loss += CRITERION(out_class[N_i], labels[N_i])
             loss.backward()
             losses_step.append(loss.item())
