@@ -93,7 +93,7 @@ def train(model,
         np.save(f'{subdir}/stats.npy', stats)
 
         # curriculum stuff + save
-        if np.mean(accuracy) > 98.:
+        if np.mean(accuracy) > 98.:  # so it doesn't forget the older tasks
             if accuracy[-1] > 98.:
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
                 save_model(model,
@@ -149,7 +149,7 @@ if __name__ == '__main__':
                         init_heads=1,
                         add_heads=1,
                         forget_heads=1,
-                        seed=np.random.choice(2 ** 32)
+                        seed=np.random.choice(2 ** 16 - 1)
                         )
 
     # Parse the command-line arguments

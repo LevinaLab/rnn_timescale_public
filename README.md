@@ -80,3 +80,13 @@ which takes the following arguments
     N_min (int): minimum N, potentially depending on curriculum_type
 
 For example: ```load_model('cumulative', 'parity', 1, 2, 50)```
+
+Update rule: 
+
+$r_i(t) = (1 -\frac{1}{\tau})r_i(t-1) + \frac{1}{2}r_j(t-1)$  
+
+r_i(t)  =  w_{ij}r_j(t)   + 
+
+input is 1, 500, 
+
+

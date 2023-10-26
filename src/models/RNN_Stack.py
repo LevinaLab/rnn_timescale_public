@@ -102,7 +102,7 @@ class RNN_Stack(nn.Module):
 
         for t in range(data.size(0)):
             inp = x[t, ...]
-            for i in range(len(self.net_size)):
+            for i in range(len(self.net_size)):  # net_size is normally just 1.
 
                 if self.train_tau:
                      ## with training taus

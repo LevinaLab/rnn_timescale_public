@@ -13,9 +13,32 @@ def generate_binary_sequence(M, balanced=False):
 ############ N_PARITY TASKS ##############
 
 def get_parity(vec, N):
+    """
+
+    Parameters
+    ----------
+    vec: [torch.Tensor]
+    N: how many steps back it needs to remember in order to check for parity
+
+    Returns
+    -------
+
+    """
     return (vec[-N:].sum() % 2).long()
 
 def make_batch_Nbit_pair_parity(Ns, bs):
+    """ Generates input sequences and labels for the N-bit parity task.
+    Parameters
+    ----------
+    Ns: list of how many different N you want the labels for.
+    bs: how many batches.
+
+    Returns
+    -------
+    tuple (sequence, labels):
+        sequence: torch.Tensor of shape [batch_size, sequence length, input_features]
+        labels: list of torch.Tensor of shape (bs, 1)
+    """
     M_min = Ns[-1] + 2
     M_max = M_min + 3 * Ns[-1]
     M = np.random.randint(M_min, M_max)
