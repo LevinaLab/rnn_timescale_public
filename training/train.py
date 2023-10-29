@@ -56,7 +56,7 @@ def train(model,
             # Backward and optimize
             loss = 0.
             for N_i in range(len(Ns)):
-                # forward pass for all N_i, requires custom forward pass, that takes as input number of N's you actually have this far into the encephalization.
+                # todo: forward pass for all N_i, requires custom forward pass, that takes as input number of N's you actually have this far into the encephalization.
                 loss += CRITERION(out_class[N_i], labels[N_i])
             loss.backward()
             losses_step.append(loss.item())
@@ -66,7 +66,7 @@ def train(model,
 
         losses.append(np.mean(losses_step))
 
-        correct_N = np.zeros_like(Ns)
+        correct_N = torch.zeros_like(torch.tensor(Ns)).to(device)
         total = 0
         for j in range(TEST_STEPS):
             with torch.no_grad():
@@ -78,7 +78,6 @@ def train(model,
 
                 for N_i in range(len(Ns)):
                     predicted = torch.max(out_class[N_i], 1)[1]
-
                     correct_N[N_i] += (predicted == labels[N_i]).sum()
                     total += labels[N_i].size(0)
 
@@ -86,7 +85,7 @@ def train(model,
         accuracies.append(accuracy)
 
         print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Accuracy {:.4f}  %'
-              .format(epoch + 1, num_epochs, i + 1, TRAINING_STEPS, losses[-1], np.mean(accuracy)), flush=True)
+              .format(epoch + 1, num_epochs, i + 1, TRAINING_STEPS, losses[-1], accuracy.mean()), flush=True)
         print('({N}, accuracy):\n' + ''.join([f'({Ns[i]}, {accuracy[i]:.4f})\n' for i in range(len(Ns))]), flush=True)
 
         stats = {'loss': losses,
@@ -94,7 +93,7 @@ def train(model,
         np.save(f'{subdir}/stats.npy', stats)
 
         # curriculum stuff + save
-        if np.mean(accuracy) > 98.:  # so it doesn't forget the older tasks
+        if accuracy.mean() > 98.:  # so it doesn't forget the older tasks
             if accuracy[-1] > 98.:
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
                 save_model(model,
