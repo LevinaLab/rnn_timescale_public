@@ -6,7 +6,43 @@ import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-class RNN_Stack(nn.Module):
+
+class RNN_Hierarch(nn.Module):
+    def __init__(self, depth, input_size, net_size, num_classes, bias, train_tau, tau=1.):
+        super(RNN_Hierarch, self).__init__()
+
+        self.depth = depth
+        self.rnns = nn.ModuleList()
+        self._current_depth = 0
+
+        for i in range(depth):
+            module_instance = RNN_Module(location_in_hierarchy=i,
+                                         input_size=input_size,
+                                         net_size=net_size,
+                                         num_classes=num_classes,
+                                         bias=bias,
+                                         num_readout_heads=1,
+                                         tau=tau,
+                                         train_tau=train_tau,
+                                         )
+            self.rnns.append(module_instance)
+
+    def forward(self, data, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
+
+        for i in range(self._current_depth):
+            rnn = self.rnns[i]
+            hs, out = rnn(data=data, hier_signal=hs[-1], hs=hs, classify_in_time=classify_in_time, savetime=savetime, index_in_head=index_in_head)
+
+
+    def grow(self, duplicate_weights):
+        if self._current_depth >= self.depth - 1:
+            raise RuntimeError('Cannot grow network anymore.')
+        self._current_depth += 1
+        if duplicate_weights and self._current_depth < self.depth - 1:
+            self.rnns[self._current_depth + 1].weight.data = self.rnns[self._current_depth - 2].weight.data
+
+
+class RNN_Module(nn.Module):
     '''
     Custom RNN class so that we can make RNNs with layers with different sizes,
     and also to save hidden_layer states through time.
@@ -29,16 +65,17 @@ class RNN_Stack(nn.Module):
         if we train the taus
     '''
 
-    def __init__(self, input_size=28,
-                 net_size=[28, 28, 28],
+    def __init__(self, location_in_hierarchy,
+                 input_size=28,
+                 net_size=[100],
                  num_classes=2,
                  bias=True,
                  num_readout_heads=1,
                  tau=1.,
-                 train_tau=False
+                 train_tau=False,
                  ):
-        super(RNN_Stack, self).__init__()
-        # todo: create the full network with moduless right off the bat.
+        super(RNN_Module, self).__init__()
+
         self.input_size = input_size
         self.net_size = net_size
         self.num_classes = num_classes
@@ -46,15 +83,20 @@ class RNN_Stack(nn.Module):
         self.num_readout_heads = num_readout_heads
         self.tau = tau
         self.train_tau = train_tau
+        self.location_in_hierarchy = location_in_hierarchy
 
         self.input_layers = [nn.Linear(input_size, net_size[0], bias=bias)]
 
         # recurrent connections
         self.w_hh = [nn.Linear(net_size[i], net_size[i], bias=bias)
                      for i in range(len(net_size))]
-        # forward connections
+        # forward connections -- these layers account for depth of *a single module*
         self.w_hh_i = [nn.Linear(net_size[i], net_size[i + 1], bias=bias)
                        for i in range(len(net_size) - 1)]
+
+        # forward connections from another module in the hierarchy
+        # todo: assumes that the superior module is single layer and of the same size as this current module
+        self.w_ff_in = nn.Linear(net_size[0], net_size[0], bias=bias)
 
         # setting the single neuron tau
         if self.train_tau:
@@ -72,7 +114,7 @@ class RNN_Stack(nn.Module):
         self.afunc = nn.LeakyReLU()
 
 
-    def forward(self, data, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
+    def forward(self, data, hier_signal, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
         '''
         input: data [batch_size, sequence length, input_features]
         output:
@@ -105,24 +147,25 @@ class RNN_Stack(nn.Module):
             for i in range(len(self.net_size)):  # net_size is normally just 1.
 
                 if self.train_tau:
-                     ## with training taus
-                    if i == 0:
-                        hs[i] = (1 - 1/torch.clamp(self.taus[i], min=1.)) * hs[i] + \
-                                (self.w_hh[i](hs[i]) + \
-                                inp)/torch.clamp(self.taus[i], min=1.)
-                    else:
-                        hs[i] = (1 - 1/torch.clamp(self.taus[i], min=1.)) * hs[i] + \
-                                (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) + \
-                                inp)/torch.clamp(self.taus[i], min=1.)
-
+                    ## with training taus
+                    # if i == 0:
+                    #     hs[i] = (1 - 1/torch.clamp(self.taus[i], min=1.)) * hs[i] + \
+                    #             (self.w_hh[i](hs[i]) + \
+                    #             inp)/torch.clamp(self.taus[i], min=1.)
+                    # else:
+                    #     hs[i] = (1 - 1/torch.clamp(self.taus[i], min=1.)) * hs[i] + \
+                    #             (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) + \
+                    #             inp)/torch.clamp(self.taus[i], min=1.)
+                     raise NotImplementedError
                 else:
                     ## with fixed tau
                     if i == 0:
                         hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
-                                (self.w_hh[i](hs[i]) + inp)/(self.taus[i])
+                                (self.w_hh[i](hs[i]) + self.w_ff_in(hier_signal) + inp)/(self.taus[i])
                     else:
                         hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
-                                (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) + inp)/(self.taus[i])
+                                (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) +
+                                 self.w_ff_in(hier_signal) + inp)/(self.taus[i])
 
 
                 hs[i] = self.afunc(hs[i])
