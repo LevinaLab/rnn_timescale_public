@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,42 +9,7 @@ import numpy as np
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-class RNN_Hierarch(nn.Module):
-    def __init__(self, depth, input_size, net_size, num_classes, bias, train_tau, tau=1.):
-        super(RNN_Hierarch, self).__init__()
-
-        self.depth = depth
-        self.rnns = nn.ModuleList()
-        self._current_depth = 0
-
-        for i in range(depth):
-            module_instance = RNN_Module(location_in_hierarchy=i,
-                                         input_size=input_size,
-                                         net_size=net_size,
-                                         num_classes=num_classes,
-                                         bias=bias,
-                                         num_readout_heads=1,
-                                         tau=tau,
-                                         train_tau=train_tau,
-                                         )
-            self.rnns.append(module_instance)
-
-    def forward(self, data, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
-
-        for i in range(self._current_depth):
-            rnn = self.rnns[i]
-            hs, out = rnn(data=data, hier_signal=hs[-1], hs=hs, classify_in_time=classify_in_time, savetime=savetime, index_in_head=index_in_head)
-
-
-    def grow(self, duplicate_weights):
-        if self._current_depth >= self.depth - 1:
-            raise RuntimeError('Cannot grow network anymore.')
-        self._current_depth += 1
-        if duplicate_weights and self._current_depth < self.depth - 1:
-            self.rnns[self._current_depth + 1].weight.data = self.rnns[self._current_depth - 2].weight.data
-
-
-class RNN_Module(nn.Module):
+class RNN_Hierarchical(nn.Module):
     '''
     Custom RNN class so that we can make RNNs with layers with different sizes,
     and also to save hidden_layer states through time.
@@ -65,7 +32,7 @@ class RNN_Module(nn.Module):
         if we train the taus
     '''
 
-    def __init__(self, location_in_hierarchy,
+    def __init__(self, depth=1,  # how many "modules" there are in the hierarchy.
                  input_size=28,
                  net_size=[100],
                  num_classes=2,
@@ -74,7 +41,7 @@ class RNN_Module(nn.Module):
                  tau=1.,
                  train_tau=False,
                  ):
-        super(RNN_Module, self).__init__()
+        super(RNN_Hierarchical, self).__init__()
 
         self.input_size = input_size
         self.net_size = net_size
@@ -83,38 +50,42 @@ class RNN_Module(nn.Module):
         self.num_readout_heads = num_readout_heads
         self.tau = tau
         self.train_tau = train_tau
-        self.location_in_hierarchy = location_in_hierarchy
-
-        self.input_layers = [nn.Linear(input_size, net_size[0], bias=bias)]
-
-        # recurrent connections
-        self.w_hh = [nn.Linear(net_size[i], net_size[i], bias=bias)
-                     for i in range(len(net_size))]
-        # forward connections -- these layers account for depth of *a single module*
-        self.w_hh_i = [nn.Linear(net_size[i], net_size[i + 1], bias=bias)
-                       for i in range(len(net_size) - 1)]
-
-        # forward connections from another module in the hierarchy
-        # todo: assumes that the superior module is single layer and of the same size as this current module
-        self.w_ff_in = nn.Linear(net_size[0], net_size[0], bias=bias)
-
-        # setting the single neuron tau
-        if self.train_tau:
-            # fixed trainble tau
-            self.taus = [nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
-        else:
-            # fixed tau
-            self.taus = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
-
-        self.fc = [nn.Linear(net_size[-1], num_classes, bias=bias) for i in range(num_readout_heads)]
-
-        self.parameterlist = nn.ParameterList(self.taus)
-        self.modulelist = nn.ModuleList(self.input_layers + self.w_hh + self.w_hh_i + self.fc)
+        self.depth = depth
+        self.current_depth = 0
 
         self.afunc = nn.LeakyReLU()
 
+        self.module_dict = defaultdict(dict)  # module_dict[network][layer] = layer_object
+        self.modules = nn.ModuleList()
 
-    def forward(self, data, hier_signal, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
+        for d in range(depth):
+
+            self.module_dict[d]['input_layers'] = [nn.Linear(input_size, net_size[0], bias=bias)]
+            # recurrent connections
+            self.module_dict[d]['w_hh'] = [nn.Linear(net_size[i], net_size[i], bias=bias)
+                                           for i in range(len(net_size))]
+
+
+            # forward connections from another module in the hierarchy
+            # todo: assumes that the superior module is single layer and of the same size as this current module
+            self.module_dict[d]['w_ff_in'] = nn.Linear(net_size[0], net_size[0], bias=bias)
+
+            # setting the single neuron tau
+            if self.train_tau:
+                # fixed trainble tau
+                self.module_dict[d]['taus'] = [nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
+            else:
+                # fixed tau
+                self.module_dict[d]['taus'] = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
+
+            self.module_dict[d]['fc'] = [nn.Linear(net_size[-1], num_classes, bias=bias) for i in range(num_readout_heads)]
+
+            self.parameterlist = nn.ParameterList(self.taus)  # todo: what is this good for? it's not used anywhere.
+            for k, v in self.module_dict[d].items():
+                self.modules.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
+
+
+    def forward(self, data, hier_signal, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
         '''
         input: data [batch_size, sequence length, input_features]
         output:
@@ -128,47 +99,45 @@ class RNN_Module(nn.Module):
         index_in_head: if we want to have faster evaluation,
             we can pass the index of the head that we want to return
         '''
-        if hs is None:
+        if net_hs is None:
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
-            hs = [0.1 * torch.rand(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
+            net_hs = []
+            for d in range(self.depth):
+                hs = [0.1 * torch.rand(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
+                net_hs.append(hs)
 
-        hs_t = [[h.clone() for h in hs]]
-        x = torch.stack([input_layer(data) for input_layer in self.input_layers]).mean(dim=0) # [ *, H_in] -> [*, H_out]
-
+        net_hs_t = [[h.clone() for h in hs] for hs in net_hs]
+        net_x = []
+        for d in range(self.depth):
+            # todo: what does this stack().mean() do?
+            x = torch.stack([input_layer(data) for input_layer in self.module_dict[d]['input_layers']]).mean(dim=0) # [ *, H_in] -> [*, H_out]
+            net_x.append(x)
         if classify_in_time:
             out = []
+            raise NotImplementedError
 
         # putting self connenctions to zero
-        for i in range(len(self.net_size)):
-            self.w_hh[i].weight.data.fill_diagonal_(0.)
+        for d in range(self.depth):
+            for i in range(len(self.net_size)):
+                self.module_dict[d]['w_hh'][i].weight.data.fill_diagonal_(0.)
 
         for t in range(data.size(0)):
             inp = x[t, ...]
             for i in range(len(self.net_size)):  # net_size is normally just 1.
-
-                if self.train_tau:
-                    ## with training taus
-                    # if i == 0:
-                    #     hs[i] = (1 - 1/torch.clamp(self.taus[i], min=1.)) * hs[i] + \
-                    #             (self.w_hh[i](hs[i]) + \
-                    #             inp)/torch.clamp(self.taus[i], min=1.)
-                    # else:
-                    #     hs[i] = (1 - 1/torch.clamp(self.taus[i], min=1.)) * hs[i] + \
-                    #             (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) + \
-                    #             inp)/torch.clamp(self.taus[i], min=1.)
-                     raise NotImplementedError
-                else:
-                    ## with fixed tau
-                    if i == 0:
-                        hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
-                                (self.w_hh[i](hs[i]) + self.w_ff_in(hier_signal) + inp)/(self.taus[i])
+                for j in range(self.current_depth):
+                    if self.train_tau:
+                        raise NotImplementedError
                     else:
-                        hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
-                                (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) +
-                                 self.w_ff_in(hier_signal) + inp)/(self.taus[i])
+                        ## with fixed tau
+                        if i == 0:
+                            hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
+                                    (self.w_hh[i](hs[i]) + self.w_ff_in(hier_signal) + inp)/(self.taus[i])
+                        else:
+                            hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
+                                    (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) +
+                                     self.w_ff_in(hier_signal) + inp)/(self.taus[i])
 
-
-                hs[i] = self.afunc(hs[i])
+                    hs[i] = self.afunc(hs[i])
             if savetime:
                 # hs_t.append([h.detach().to('cpu') for h in hs])
                 hs_t.append([h.clone() for h in hs])
