@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import os
-from src.models import init_model, init_model_mod
+from src.models import init_model, init_model_mod, init_model_continuous
 
 
 def load_model(
@@ -14,6 +14,7 @@ def load_model(
         base_path="./trained_models",
         strict=False,
         mod_model=False,
+        continuous_model=False,
         mod_afunc=nn.LeakyReLU,
         affixes=[],
 ):
@@ -46,9 +47,14 @@ def load_model(
         f'rnn_N{N_min:d}_N{N_max:d}',
     )
     if mod_model:
+        assert not continuous_model, ("Cannot have both mod_model and continuous_model,"
+                                      " continuous_model is implicitly mod_model")
         rnn = init_model_mod(A_FUNC=mod_afunc, DEVICE=device)
     else:
-        rnn = init_model(DEVICE=device)
+        if continuous_model:
+            rnn = init_model_continuous(DEVICE=device)
+        else:
+            rnn = init_model(DEVICE=device)
     rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'], strict = strict)
     return rnn
 
