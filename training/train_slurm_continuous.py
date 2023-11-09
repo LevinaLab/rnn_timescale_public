@@ -163,7 +163,7 @@ if __name__ == '__main__':
                         help='Time discretization: duplicate samples this many times.'
                              'Must be list of ints, e.g. -dup 2,3,4')
     parser.add_argument('-it', '--init_tau', type=float, dest='init_tau',
-                        help='Initial value of tau.')
+                        help='Initial mean value of tau.')
 
     parser.set_defaults(
         afunc='leakyrelu',
@@ -267,10 +267,9 @@ if __name__ == '__main__':
         num_readout_heads=NUM_READOUT_HEADS,
         tau=1.,
         afunc=AFUNC,
-        train_tau=TRAIN_TAU
+        train_tau=TRAIN_TAU,
+        init_tau=INIT_TAU,
         ).to(device)
-    if INIT_TAU is not None:
-        raise NotImplementedError('Init tau not implemented for mod model.')
     rnn.to(device)
 
     # SGD Optimizer

@@ -28,6 +28,7 @@ class RNN_Continuous(nn.Module):
     afunc: activation function, default nn.LeakyReLU
     train_tau: boolean, default False
         if we train the taus
+    init_tau: float, if provided, it will initialize the taus to this mean value, default None
     """
     def __init__(
         self, input_size=28,
@@ -38,6 +39,7 @@ class RNN_Continuous(nn.Module):
         tau=1.,
         afunc=nn.LeakyReLU,
         train_tau=True,
+        init_tau=None,
     ):
         super(RNN_Continuous, self).__init__()
 
@@ -66,6 +68,9 @@ class RNN_Continuous(nn.Module):
         else:
             # fixed tau
             self.taus = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
+        if init_tau is not None:
+            for i in range(len(net_size)):
+                self.taus[i].data = self.taus[i] * (init_tau / self.taus[i].data.mean())
 
         self.fc = [nn.Linear(net_size[-1], num_classes, bias=bias) for i in range(num_readout_heads)]
 
