@@ -50,7 +50,7 @@ class RNN_Hierarchical(nn.Module):
         self.num_readout_heads = num_readout_heads
         self.tau = tau
         self.train_tau = train_tau
-        self.depth = depth
+        self.depth = depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
         self.current_depth = 0
 
         self.afunc = nn.LeakyReLU()
@@ -80,7 +80,7 @@ class RNN_Hierarchical(nn.Module):
 
             self.module_dict[d]['fc'] = [nn.Linear(net_size[-1], num_classes, bias=bias) for i in range(num_readout_heads)]
 
-            self.parameterlist = nn.ParameterList(self.taus)  # todo: what is this good for? it's not used anywhere.
+            self.parameterlist = nn.ParameterList(self.module_dict[j]['taus'])  # todo: what is this good for? it's not used anywhere.
             for k, v in self.module_dict[d].items():
                 self.modules.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
 
@@ -99,69 +99,74 @@ class RNN_Hierarchical(nn.Module):
         index_in_head: if we want to have faster evaluation,
             we can pass the index of the head that we want to return
         '''
-        if net_hs is None:
+        if net_hs is None:  # todo: when is the function ever called with net_hs =! None?
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
             net_hs = []
-            for d in range(self.depth):
+            for d in range(self.current_depth):
                 hs = [0.1 * torch.rand(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
                 net_hs.append(hs)
 
         net_hs_t = [[h.clone() for h in hs] for hs in net_hs]
         net_x = []
-        for d in range(self.depth):
-            # todo: what does this stack().mean() do?
+        for d in range(self.current_depth):
+            # todo: what does this stack().mean() do? Why would ther be any averaging anyways?
             x = torch.stack([input_layer(data) for input_layer in self.module_dict[d]['input_layers']]).mean(dim=0) # [ *, H_in] -> [*, H_out]
             net_x.append(x)
-        if classify_in_time:
-            out = []
-            raise NotImplementedError
+        # if classify_in_time: # todo: this seems to be always False in the existing training code so i'll remove.
+        out = []
 
         # putting self connenctions to zero
-        for d in range(self.depth):
+        for d in range(self.current_depth):
             for i in range(len(self.net_size)):
                 self.module_dict[d]['w_hh'][i].weight.data.fill_diagonal_(0.)
 
         for t in range(data.size(0)):
             inp = x[t, ...]
-            for i in range(len(self.net_size)):  # net_size is normally just 1.
-                for j in range(self.current_depth):
+
+            for j in range(self.current_depth):
+                hs = net_hs[j]
+                taus = self.module_dict[j]['taus']
+                w_hh = self.module_dict[j]['w_hh']
+                w_ff_in = self.module_dict[j]['w_ff_in']
+                for i in range(len(self.net_size)):  # net_size is normally just 1.
                     if self.train_tau:
                         raise NotImplementedError
                     else:
                         ## with fixed tau
                         if i == 0:
-                            hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
-                                    (self.w_hh[i](hs[i]) + self.w_ff_in(hier_signal) + inp)/(self.taus[i])
+                            hs[i] = (1 - 1/taus[i]) * hs[i] + \
+                                    (w_hh[i](hs[i]) + w_ff_in(hier_signal) + inp)/(taus[i])
                         else:
-                            hs[i] = (1 - 1/(self.taus[i])) * hs[i] + \
-                                    (self.w_hh[i](hs[i]) + self.w_hh_i[i-1](hs[i-1]) +
-                                     self.w_ff_in(hier_signal) + inp)/(self.taus[i])
+                            hs[i] = (1 - 1/(taus[i])) * hs[i] + \
+                                    (w_hh[i](hs[i]) + w_ff_in[i-1](hs[i-1]) +
+                                     w_ff_in(hier_signal) + inp)/(taus[i])
 
                     hs[i] = self.afunc(hs[i])
-            if savetime:
+            if savetime: # todo: why append? Do we want to want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
-                hs_t.append([h.clone() for h in hs])
-            if classify_in_time:
-                if index_in_head is None:
-                    out.append([self.fc[i](hs[-1]) for i in range(self.num_readout_heads)])
-                else:
-                    out.append([self.fc[index_in_head](hs[-1])])
+                net_hs_t.append([[h.clone() for h in hs] for hs in net_hs])
+            # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
+            #     if index_in_head is None:
+            #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])
+            #     else:
+            #         out.append([self.fc[index_in_head](hs[-1])])
 
         if not classify_in_time:
             if index_in_head is None:
-                out = [self.fc[i](hs[-1]) for i in range(self.num_readout_heads)]
+                out = [self.module_dict['fc'][i](hs[-1]) for i in range(self.current_depth)]
             else:
-                out = [self.fc[index_in_head](hs[-1])]
+                out = [self.module_dict['fc'][index_in_head](hs[-1])]
 
         if savetime:
-            return hs_t, out
+            return net_hs_t, out
 
-        return hs, out
+        return net_hs, out
 
 
 def init_model(
     INPUT_SIZE=1,
-    NET_SIZE=[500],
+    NET_SIZE=[50],
+    DEPTH = 10,
     NUM_CLASSES=2,
     BIAS=True,
     NUM_READOUT_HEADS=100,
@@ -169,7 +174,8 @@ def init_model(
     DEVICE='cpu',
 ):
     # init new model
-    rnn = RNN_Stack(input_size=INPUT_SIZE,
+    rnn = RNN_Hierarchical(depth=1,
+                    input_size=INPUT_SIZE,
                     net_size=NET_SIZE,
                     num_classes=NUM_CLASSES,
                     bias=BIAS,
