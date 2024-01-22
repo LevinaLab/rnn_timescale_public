@@ -15,6 +15,7 @@ def load_model(
         strict=False,
         mod_model=False,
         mod_afunc=nn.LeakyReLU,
+        num_classes=2,
         affixes = []
 ):
     """Load the RNNs for the given type and network_name.
@@ -34,15 +35,14 @@ def load_model(
     affix_str = '_'
     if len(affixes) > 0:
         affix_str += '_'.join(affixes) + '_'
-    
+
+    # TODO: fix for sliding window
     if curriculum_type == 'sliding':
         rnn_subdir = os.path.join(
-            base_path,
             f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
         )
     else:
         rnn_subdir = os.path.join(
-            base_path,
             f'{curriculum_type}_{task}{affix_str}network_{network_number}'
         )
     
@@ -52,9 +52,9 @@ def load_model(
         f'rnn_N{N_min:d}_N{N_max:d}',
     )
     if mod_model:
-        rnn = init_model_mod(A_FUNC=mod_afunc, DEVICE=device)
+        rnn = init_model_mod(A_FUNC=mod_afunc, NUM_CLASSES=num_classes, DEVICE=device)
     else:
-        rnn = init_model(DEVICE=device)
+        rnn = init_model(NUM_CLASSES=num_classes, DEVICE=device)
     rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'], strict = strict)
     return rnn
 
