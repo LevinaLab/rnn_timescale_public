@@ -53,7 +53,7 @@ def _train(
             for duplicate in DUPLICATES:
                 OPTIMIZER.zero_grad()
                 sequences, labels = TASK_FUNCTION(Ns, BATCH_SIZE, duplicate=duplicate)
-                sequences = sequences.permute(1, 0, 2).to(device)
+                sequences = sequences.to(device)
                 labels = [l.to(device) for l in labels]
 
                 # Forward pass
@@ -77,7 +77,7 @@ def _train(
             with torch.no_grad():
                 for duplicate in DUPLICATES:
                     sequences, labels = TASK_FUNCTION(Ns, BATCH_SIZE, duplicate=duplicate)
-                    sequences = sequences.permute(1, 0, 2).to(device)
+                    sequences = sequences.to(device)
                     labels = [l.to(device) for l in labels]
 
                     out, out_class = model(sequences, k_data=duplicate)
