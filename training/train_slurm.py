@@ -50,7 +50,7 @@ def train(model,
         for i in range(TRAINING_STEPS):
             OPTIMIZER.zero_grad()
             sequences, labels = task_function(Ns, BATCH_SIZE)
-            sequences = sequences.permute(1, 0, 2).to(device)
+            sequences = sequences.to(device)
             labels = [l.to(device) for l in labels]
 
             # Forward pass
@@ -73,7 +73,7 @@ def train(model,
         for j in range(TEST_STEPS):
             with torch.no_grad():
                 sequences, labels = task_function(Ns, BATCH_SIZE)
-                sequences = sequences.permute(1, 0, 2).to(device)
+                sequences = sequences.to(device)
                 labels = [l.to(device) for l in labels]
 
                 out, out_class = model(sequences)
@@ -120,6 +120,9 @@ def train(model,
                 if curriculum_type == 'single':
                     Ns = [Ns[0] + 1]
 
+                if curriculum_type == 'single_nocurr':
+                    break
+
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
     return stats
@@ -134,34 +137,43 @@ if __name__ == '__main__':
 
     # Add arguments to the parser
     parser.add_argument('-b', '--base_path', type=str, dest='base_path',
-                        help='The base path to save results.')
+                        help='The base path to save results. (str)')
+    parser.add_argument('-nn', '--num_neurons', type=int, dest='num_neurons',
+                        help='The number of hidden neurons in the RNN. (int)')
+    parser.add_argument('-ni', '--ns_init', type=int, dest='ns_init',
+                        help='The starting value of N for the task. (int)')
     parser.add_argument('-m', '--model_type', type=str, dest='model_type',
-                        help='Model types: (default, mod)')
+                        help='Model types: (default, mod). (str)')
     parser.add_argument('-a', '--afunc', type=str, dest='afunc',
-                        help='Acitvation functions: (leakyrelu, relu, tanh, sigmoid)')
+                        help='Acitvation functions: (leakyrelu, relu, tanh, sigmoid). (str)')
     parser.add_argument('-c', '--curriculum_type', type=str, dest='curriculum_type',
-                        help='Curriculum type: (cumulative, sliding, single)')
+                        help='Curriculum type: (cumulative, sliding, single, single_nocurr). (str)')
     parser.add_argument('-t', '--task', type=str, dest='task',
-                        help='Task: (parity, dms)')
+                        help='Task: (parity, dms). (str)')
+    parser.add_argument('-T', '--tau', type=float, dest='tau',
+                        help='The value of tau each neuron starts with. If set, taus will not be trainable. '
+                             'Default = None. (float > 1)')
     parser.add_argument('-n', '--network_number', type=int, dest='network_number',
-                        help='The run number of the network, to be used as a naming suffix for savefiles.')
+                        help='The run number of the network, to be used as a naming suffix for savefiles. (int)')
     parser.add_argument('-ih', '--init_heads', type=int, dest='init_heads',
-                        help='Number of heads to start with.')
+                        help='Number of heads to start with. (int)')
     parser.add_argument('-dh', '--add_heads', type=int, dest='add_heads',
-                        help='Number of heads to add per new curricula.')
+                        help='Number of heads to add per new curricula. (int)')
     parser.add_argument('-fh', '--forget_heads', type=int, dest='forget_heads',
-                        help='Number of heads to forget for the sliding window curriculum type.')
+                        help='Number of heads to forget for the sliding window curriculum type. (int)')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
-                        help='Random seed.')
+                        help='Random seed. (int)')
     parser.add_argument('-dup', '--duplicate', type=int, dest='duplicate',
                         help='Time discretization: duplicate samples this many times.')
     parser.add_argument('-it', '--init_tau', type=float, dest='init_tau',
                         help='Initial value of tau.')
 
     parser.set_defaults(model_type='default',
+                        num_neurons=500,
                         afunc='leakyrelu',
                         curriculum_type='cumulative',
                         task='parity',
+                        tau=None,
                         network_number=1,
                         init_heads=1,
                         add_heads=1,
@@ -175,11 +187,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Access the values of the arguments
+    print('num_neurons:', args.num_neurons)
     print('curriculum_type:', args.curriculum_type)
     print('task:', args.task)
     print('network number:', args.network_number)
 
     BASE_PATH = args.base_path
+    NS_INIT = args.ns_init
+    NUM_NEURONS = args.num_neurons
     AFFIXES = []
 
     # USER ARGUMENTS (curriculum type/task and related params)
@@ -194,6 +209,11 @@ if __name__ == '__main__':
     if INIT_TAU is not None:
         AFFIXES.append(f'tau{INIT_TAU}')
     NETWORK_NUMBER = args.network_number
+    TAU = args.tau
+    if TAU is not None:
+        TRAIN_TAU = False
+    else:
+        TRAIN_TAU = True
 
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
     NUM_ADD = args.add_heads  # how many heads/tasks to add per new curricula (only relevant for cumulative curriculum)
@@ -221,7 +241,7 @@ if __name__ == '__main__':
         if INIT_HEADS < NUM_FORGET:
             INIT_HEADS = NUM_FORGET
         Ns_init = list(np.arange(2, 2 + INIT_HEADS))
-    elif CURRICULUM == 'single':
+    elif CURRICULUM == 'single' or CURRICULUM == 'single_nocurr':
         Ns_init = [2]
         INIT_HEADS = 1
         NUM_FORGET = 1
@@ -229,13 +249,15 @@ if __name__ == '__main__':
         print('Unrecognized curriculum type: ', CURRICULUM)
     ###############################################################
 
+    if NS_INIT is not None:
+        Ns_init = [N - 2 + NS_INIT for N in Ns_init]
+
     # MODEL PARAMS
     INPUT_SIZE = 1
-    NET_SIZE = [500]
+    NET_SIZE = [NUM_NEURONS]
     NUM_CLASSES = 2
     BIAS = True
     NUM_READOUT_HEADS = 100
-    TRAIN_TAU = True
 
     # TRAINING PARAMS
     NUM_EPOCHS = 1000
@@ -248,7 +270,8 @@ if __name__ == '__main__':
     # init new model
     if MODEL == 'mod':
         AFFIXES += ['mod', AFUNC]
-
+        if TAU is not None:
+            AFFIXES += ['T', str(TAU)]
         if AFUNC == 'leakyrelu':
             AFUNC = nn.LeakyReLU
         elif AFUNC == 'relu':
@@ -265,7 +288,7 @@ if __name__ == '__main__':
                         num_classes=NUM_CLASSES,
                         bias=BIAS,
                         num_readout_heads=NUM_READOUT_HEADS,
-                        tau=1.,
+                        tau=TAU,
                         afunc=AFUNC,
                         train_tau=TRAIN_TAU
                         ).to(device)
@@ -273,12 +296,18 @@ if __name__ == '__main__':
             raise NotImplementedError('Init tau not implemented for mod model.')
         rnn.to(device)
     elif MODEL == 'default':
+
+        if NUM_NEURONS != 500:
+            AFFIXES += ['size', str(NUM_NEURONS)]
+        if TAU is not None:
+           AFFIXES += ['T', str(TAU)]
+
         rnn = RNN_Stack(input_size=INPUT_SIZE,
                         net_size=NET_SIZE,
                         num_classes=NUM_CLASSES,
                         bias=BIAS,
                         num_readout_heads=NUM_READOUT_HEADS,
-                        tau=1.,
+                        tau=TAU,
                         train_tau=TRAIN_TAU,
                         init_tau=INIT_TAU,
                         ).to(device)

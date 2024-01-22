@@ -14,7 +14,7 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 
-from src.models import RNN_Stack
+from src.models import RNN_Stack, RNN_Mod
 import src.tasks as tasks
 from src.utils import save_model
 
@@ -38,7 +38,9 @@ def train(model,
                         network_number=run_number,
                         N_max=Ns[-1],
                         N_min=Ns[0],
-                        init=True
+                        init=True,
+                        base_path=BASE_PATH,
+                        affixes=AFFIXES
                       )
 
     # Train the model
@@ -46,8 +48,12 @@ def train(model,
         losses_step = []
         for i in range(TRAINING_STEPS):
             OPTIMIZER.zero_grad()
-            sequences, labels = task_function(Ns, BATCH_SIZE)
-            sequences = sequences.permute(1, 0, 2).to(device)
+            if TASK == 'smnist':
+                args = (Ns, BATCH_SIZE, TRAIN_SET)
+            else:
+                args = (Ns, BATCH_SIZE)
+            sequences, labels = task_function(*args)
+            sequences = sequences.to(device)
             labels = [l.to(device) for l in labels]
 
             # Forward pass
@@ -69,8 +75,12 @@ def train(model,
         total = 0
         for j in range(TEST_STEPS):
             with torch.no_grad():
-                sequences, labels = task_function(Ns, BATCH_SIZE)
-                sequences = sequences.permute(1, 0, 2).to(device)
+                if TASK == 'smnist':
+                    args = (Ns, BATCH_SIZE, TEST_SET)
+                else:
+                    args = (Ns, BATCH_SIZE)
+                sequences, labels = task_function(*args)
+                sequences = sequences.to(device)
                 labels = [l.to(device) for l in labels]
 
                 out, out_class = model(sequences)
@@ -103,7 +113,9 @@ def train(model,
                            task=task,
                            network_number=run_number,
                            N_max=Ns[-1],
-                           N_min=Ns[0]
+                           N_min=Ns[0],
+                           base_path=BASE_PATH,
+                           affixes=AFFIXES
                            )
 
                 if curriculum_type == 'cumulative':
@@ -114,6 +126,9 @@ def train(model,
 
                 if curriculum_type == 'single':
                     Ns = [Ns[0] + 1]
+
+                if curriculum_type == 'single_nocurr':
+                    break
 
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
@@ -128,24 +143,34 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Add arguments to the parser
+    parser.add_argument('-b', '--base_path', type=str, dest='base_path',
+                        help='The base path to save results. (str)')
+    parser.add_argument('-ni', '--ns_init', type=int, dest='ns_init',
+                        help='The starting value of N for the task. (int)')
+    parser.add_argument('-m', '--model_type', type=str, dest='model_type',
+                        help='Model types: (default, mod). (str)')
+    parser.add_argument('-a', '--afunc', type=str, dest='afunc',
+                        help='Acitvation functions: (leakyrelu, relu, tanh, sigmoid). (str)')
     parser.add_argument('-c', '--curriculum_type', type=str, dest='curriculum_type',
-                        help='Curriculum type: (cumulative, sliding, single)')
+                        help='Curriculum type: (cumulative, sliding, single, single_nocurr). (str)')
     parser.add_argument('-t', '--task', type=str, dest='task',
-                        help='Task: (parity, dms)')
-    parser.add_argument('-r', '--runs', type=int, dest='runs',
-                        help='Number of independent runs.')
+                        help='Task: (parity, dms). (str)')
+    parser.add_argument('-n', '--network_number', type=int, dest='network_number',
+                        help='The run number of the network, to be used as a naming suffix for savefiles. (int)')
     parser.add_argument('-ih', '--init_heads', type=int, dest='init_heads',
-                        help='Number of heads to start with.')
+                        help='Number of heads to start with. (int)')
     parser.add_argument('-dh', '--add_heads', type=int, dest='add_heads',
-                        help='Number of heads to add per new curricula.')
+                        help='Number of heads to add per new curricula. (int)')
     parser.add_argument('-fh', '--forget_heads', type=int, dest='forget_heads',
-                        help='Number of heads to forget for the sliding window curriculum type.')
+                        help='Number of heads to forget for the sliding window curriculum type. (int)')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
-                        help='Random seed.')
+                        help='Random seed. (int)')
 
-    parser.set_defaults(curriculum_type='cumulative',
+    parser.set_defaults(model_type='default',
+                        afunc='leakyrelu',
+                        curriculum_type='cumulative',
                         task='parity',
-                        runs=1,
+                        network_number=1,
                         init_heads=1,
                         add_heads=1,
                         forget_heads=1,
@@ -158,12 +183,17 @@ if __name__ == '__main__':
     # Access the values of the arguments
     print('curriculum_type:', args.curriculum_type)
     print('task:', args.task)
-    print('runs:', args.runs)
+    print('network number:', args.network_number)
+
+    BASE_PATH = args.base_path
+    NS_INIT = args.ns_init
 
     # USER ARGUMENTS (curriculum type/task and related params)
+    MODEL = args.model_type
+    AFUNC = args.afunc
     CURRICULUM = args.curriculum_type
     TASK = args.task
-    RUNS = args.runs
+    NETWORK_NUMBER = args.network_number
 
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
     NUM_ADD = args.add_heads  # how many heads/tasks to add per new curricula (only relevant for cumulative curriculum)
@@ -176,8 +206,14 @@ if __name__ == '__main__':
     # Figure out which task
     if TASK == 'parity':
         task_function = tasks.make_batch_Nbit_pair_parity
+        NUM_CLASSES = 2
     elif TASK == 'dms':
         task_function = tasks.make_batch_multihead_dms
+        NUM_CLASSES = 2
+    elif TASK == 'smnist':
+        TRAIN_SET, TEST_SET = tasks.init_mnist()
+        task_function = tasks.get_smnist_batch
+        NUM_CLASSES = 10
     else:
         print('Unrecognized task:', TASK)
 
@@ -188,7 +224,7 @@ if __name__ == '__main__':
         if INIT_HEADS < NUM_FORGET:
             INIT_HEADS = NUM_FORGET
         Ns_init = list(np.arange(2, 2 + INIT_HEADS))
-    elif CURRICULUM == 'single':
+    elif CURRICULUM == 'single' or CURRICULUM == 'single_nocurr':
         Ns_init = [2]
         INIT_HEADS = 1
         NUM_FORGET = 1
@@ -196,10 +232,12 @@ if __name__ == '__main__':
         print('Unrecognized curriculum type: ', CURRICULUM)
     ###############################################################
 
+    if NS_INIT is not None:
+        Ns_init = [N - 2 + NS_INIT for N in Ns_init]
+
     # MODEL PARAMS
     INPUT_SIZE = 1
     NET_SIZE = [500]
-    NUM_CLASSES = 2
     BIAS = True
     NUM_READOUT_HEADS = 100
     TRAIN_TAU = True
@@ -212,8 +250,37 @@ if __name__ == '__main__':
     CRITERION = nn.CrossEntropyLoss()
     device = 'cuda'
 
-    for r_idx in range(1, RUNS+1):
-        # init new model
+    # init new model
+    if MODEL == 'mod':
+
+        AFFIXES = ['mod', AFUNC]
+
+        if AFUNC == 'leakyrelu':
+            AFUNC = nn.LeakyReLU
+        elif AFUNC == 'relu':
+            AFUNC = nn.ReLU
+        elif AFUNC == 'sigmoid':
+            AFUNC = nn.Sigmoid
+        elif AFUNC == 'tanh':
+            AFUNC = nn.Tanh
+        else:
+            print('Unrecognized activation function: ', AFUNC)
+
+        rnn = RNN_Mod(input_size=INPUT_SIZE,
+                        net_size=NET_SIZE,
+                        num_classes=NUM_CLASSES,
+                        bias=BIAS,
+                        num_readout_heads=NUM_READOUT_HEADS,
+                        tau=1.,
+                        afunc=AFUNC,
+                        train_tau=TRAIN_TAU
+                        ).to(device)
+
+        rnn.to(device)
+    elif MODEL == 'default':
+
+        AFFIXES = []
+
         rnn = RNN_Stack(input_size=INPUT_SIZE,
                         net_size=NET_SIZE,
                         num_classes=NUM_CLASSES,
@@ -224,19 +291,21 @@ if __name__ == '__main__':
                         ).to(device)
 
         rnn.to(device)
+    else:
+        print('Unrecognized model type: ', MODEL)
+
+    # SGD Optimizer
+    # learning_rate = 0.05
+    # momentum = 0.1
+    learning_rate = 0.05
+    momentum = 0.9
+    OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
 
 
-        # SGD Optimizer
-        learning_rate = 0.05
-        momentum = 0.1
-        OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
-
-
-        stats = train(rnn,
-                      curriculum_type=CURRICULUM,
-                      task=TASK,
-                      num_epochs=NUM_EPOCHS,
-                      Ns=Ns_init,
-                      run_number=r_idx
-                      )
-
+    stats = train(rnn,
+                  curriculum_type=CURRICULUM,
+                  task=TASK,
+                  num_epochs=NUM_EPOCHS,
+                  Ns=Ns_init,
+                  run_number=NETWORK_NUMBER
+                  )

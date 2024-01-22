@@ -16,6 +16,7 @@ def load_model(
         mod_model=False,
         continuous_model=False,
         mod_afunc=nn.LeakyReLU,
+        num_classes=2,
         affixes=[],
 ):
     """Load the RNNs for the given type and network_name.
@@ -35,7 +36,8 @@ def load_model(
     affix_str = '_'
     if len(affixes) > 0:
         affix_str += '_'.join(affixes) + '_'
-    
+
+    # TODO: fix for sliding window
     if curriculum_type == 'sliding':
         rnn_subdir = f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
     else:
@@ -49,12 +51,12 @@ def load_model(
     if mod_model:
         assert not continuous_model, ("Cannot have both mod_model and continuous_model,"
                                       " continuous_model is implicitly mod_model")
-        rnn = init_model_mod(A_FUNC=mod_afunc, DEVICE=device)
+        rnn = init_model_mod(A_FUNC=mod_afunc, NUM_CLASSES=num_classes, DEVICE=device)
     else:
         if continuous_model:
             rnn = init_model_continuous(DEVICE=device)
         else:
-            rnn = init_model(DEVICE=device)
+            rnn = init_model(NUM_CLASSES=num_classes, DEVICE=device)
     rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'], strict = strict)
     return rnn
 

@@ -60,7 +60,7 @@ class RNN_Stack(nn.Module):
         # setting the single neuron tau
         if self.train_tau:
             # fixed trainble tau
-            self.taus = [nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
+            self.taus = [nn.Parameter(self.tau + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
         else:
             # fixed tau
             self.taus = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
