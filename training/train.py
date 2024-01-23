@@ -103,8 +103,40 @@ def train(model,
         np.save(f'{subdir}/stats.npy', stats)
 
         # curriculum stuff + save
-        if np.mean(accuracy) > 98.:
-            if accuracy[-1] > 98.:
+        curr_condition = ((np.mean(accuracy) > 98.) and (accuracy[-1] > 98.))
+        if TASK == 'smnist':
+            if Ns[-1] == 2:
+                curr_condition = (accuracy[-1] > 40.)
+            if Ns[-1] == 3:
+                curr_condition = (accuracy[-1] > 45.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+            if Ns[-1] == 4:
+                curr_condition = (accuracy[-1] > 50.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+            if Ns[-1] == 5:
+                curr_condition = (accuracy[-1] > 65.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+            if Ns[-1] == 6:
+                curr_condition = (accuracy[-1] > 70.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+            if Ns[-1] == 7:
+                curr_condition = (accuracy[-1] > 75.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+            if Ns[-1] == 8:
+                curr_condition = (accuracy[-1] > 85.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+            if Ns[-1] >= 9:
+                curr_condition = (accuracy[-1] > 90.)
+                for g in OPTIMIZER.param_groups:
+                    g['lr'] *= 0.8
+
+        if curr_condition:
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
                 save_model(model,
                            curriculum_type=curriculum_type,
