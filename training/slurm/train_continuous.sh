@@ -21,7 +21,7 @@ echo "---------- JOB INFOS ------------"
 scontrol show job $SLURM_JOB_ID
 echo "---------------------------------"
 
-save_path="/mnt/qb/levina/rnn_timescale_public/trained_models/continuous/"
+save_path="/path/to/your/directory"
 
 # insert your commands here
 # takes the same arguments as train.py but instead of number of runs you need to label the run number manually with -n

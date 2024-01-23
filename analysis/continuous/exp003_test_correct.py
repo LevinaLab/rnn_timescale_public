@@ -128,7 +128,7 @@ def _get_accuracy(duplicate, Ns, batch_size):
 
         for batch_size in batch_sizes:
             sequences, labels = make_batch_Nbit_pair_parity(Ns, batch_size, duplicate=duplicate)
-            sequences = sequences.permute(1, 0, 2).to(device)
+            sequences = sequences.to(device)
             labels = [l.to(device) for l in labels]
 
             out, out_class = rnn(sequences, k_data=duplicate)

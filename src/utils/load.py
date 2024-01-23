@@ -14,6 +14,8 @@ def load_model(
         base_path="./trained_models",
         strict=False,
         mod_model=False,
+        n_heads: int = 1,
+        n_forget: int = 1,
         continuous_model=False,
         mod_afunc=nn.LeakyReLU,
         num_classes=2,
