@@ -48,10 +48,7 @@ def train(model,
         losses_step = []
         for i in range(TRAINING_STEPS):
             OPTIMIZER.zero_grad()
-            if TASK == 'smnist':
-                args = (Ns, BATCH_SIZE, TRAIN_SET)
-            else:
-                args = (Ns, BATCH_SIZE)
+            args = (Ns, BATCH_SIZE)
             sequences, labels = task_function(*args)
             sequences = sequences.to(device)
             labels = [l.to(device) for l in labels]
@@ -75,10 +72,7 @@ def train(model,
         total = 0
         for j in range(TEST_STEPS):
             with torch.no_grad():
-                if TASK == 'smnist':
-                    args = (Ns, BATCH_SIZE, TEST_SET)
-                else:
-                    args = (Ns, BATCH_SIZE)
+                args = (Ns, BATCH_SIZE)
                 sequences, labels = task_function(*args)
                 sequences = sequences.to(device)
                 labels = [l.to(device) for l in labels]
@@ -145,6 +139,8 @@ if __name__ == '__main__':
     # Add arguments to the parser
     parser.add_argument('-b', '--base_path', type=str, dest='base_path',
                         help='The base path to save results. (str)')
+    parser.add_argument('-nn', '--num_neurons', type=int, dest='num_neurons',
+                        help='The number of hidden neurons in the RNN. (int)')
     parser.add_argument('-ni', '--ns_init', type=int, dest='ns_init',
                         help='The starting value of N for the task. (int)')
     parser.add_argument('-m', '--model_type', type=str, dest='model_type',
@@ -155,6 +151,9 @@ if __name__ == '__main__':
                         help='Curriculum type: (cumulative, sliding, single, single_nocurr). (str)')
     parser.add_argument('-t', '--task', type=str, dest='task',
                         help='Task: (parity, dms). (str)')
+    parser.add_argument('-T', '--tau', type=float, dest='tau',
+                        help='The value of tau each neuron starts with. If set, taus will not be trainable. '
+                             'Default = None. (float > 1)')
     parser.add_argument('-n', '--network_number', type=int, dest='network_number',
                         help='The run number of the network, to be used as a naming suffix for savefiles. (int)')
     parser.add_argument('-ih', '--init_heads', type=int, dest='init_heads',
@@ -166,27 +165,33 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed. (int)')
 
-    parser.set_defaults(model_type='default',
-                        afunc='leakyrelu',
-                        curriculum_type='cumulative',
-                        task='parity',
-                        network_number=1,
-                        init_heads=1,
-                        add_heads=1,
-                        forget_heads=1,
-                        seed=np.random.choice(2 ** 32)
-                        )
+    parser.set_defaults(
+        model_type='default',
+        num_neurons=500,
+        afunc='leakyrelu',
+        curriculum_type='cumulative',
+        task='parity',
+        tau=None,
+        network_number=1,
+        init_heads=1,
+        add_heads=1,
+        forget_heads=1,
+        seed=np.random.choice(2 ** 32),
+    )
 
     # Parse the command-line arguments
     args = parser.parse_args()
 
     # Access the values of the arguments
+    print('num_neurons:', args.num_neurons)
     print('curriculum_type:', args.curriculum_type)
     print('task:', args.task)
     print('network number:', args.network_number)
 
     BASE_PATH = args.base_path
     NS_INIT = args.ns_init
+    NUM_NEURONS = args.num_neurons
+    AFFIXES = []
 
     # USER ARGUMENTS (curriculum type/task and related params)
     MODEL = args.model_type
@@ -194,6 +199,12 @@ if __name__ == '__main__':
     CURRICULUM = args.curriculum_type
     TASK = args.task
     NETWORK_NUMBER = args.network_number
+    TAU = args.tau
+    if TAU is not None:
+        TRAIN_TAU = False
+    else:
+        TAU = 1.
+        TRAIN_TAU = True
 
     INIT_HEADS = args.init_heads  # how many heads/tasks to start with
     NUM_ADD = args.add_heads  # how many heads/tasks to add per new curricula (only relevant for cumulative curriculum)
@@ -210,10 +221,6 @@ if __name__ == '__main__':
     elif TASK == 'dms':
         task_function = tasks.make_batch_multihead_dms
         NUM_CLASSES = 2
-    elif TASK == 'smnist':
-        TRAIN_SET, TEST_SET = tasks.init_mnist()
-        task_function = tasks.get_smnist_batch
-        NUM_CLASSES = 10
     else:
         print('Unrecognized task:', TASK)
 
@@ -237,7 +244,8 @@ if __name__ == '__main__':
 
     # MODEL PARAMS
     INPUT_SIZE = 1
-    NET_SIZE = [500]
+    NET_SIZE = [NUM_NEURONS]
+    NUM_CLASSES = 2
     BIAS = True
     NUM_READOUT_HEADS = 100
     TRAIN_TAU = True
@@ -252,8 +260,9 @@ if __name__ == '__main__':
 
     # init new model
     if MODEL == 'mod':
-
-        AFFIXES = ['mod', AFUNC]
+        AFFIXES += ['mod', AFUNC]
+        if args.tau is not None:
+            AFFIXES += ['T', str(TAU)]
 
         if AFUNC == 'leakyrelu':
             AFUNC = nn.LeakyReLU
@@ -266,39 +275,41 @@ if __name__ == '__main__':
         else:
             print('Unrecognized activation function: ', AFUNC)
 
-        rnn = RNN_Mod(input_size=INPUT_SIZE,
-                        net_size=NET_SIZE,
-                        num_classes=NUM_CLASSES,
-                        bias=BIAS,
-                        num_readout_heads=NUM_READOUT_HEADS,
-                        tau=1.,
-                        afunc=AFUNC,
-                        train_tau=TRAIN_TAU
-                        ).to(device)
+        rnn = RNN_Mod(
+            input_size=INPUT_SIZE,
+            net_size=NET_SIZE,
+            num_classes=NUM_CLASSES,
+            bias=BIAS,
+            num_readout_heads=NUM_READOUT_HEADS,
+            tau=TAU,
+            afunc=AFUNC,
+            train_tau=TRAIN_TAU,
+        ).to(device)
 
-        rnn.to(device)
     elif MODEL == 'default':
 
-        AFFIXES = []
+        if NUM_NEURONS != 500:
+            AFFIXES += ['size', str(NUM_NEURONS)]
+        if args.tau is not None:
+            AFFIXES += ['T', str(TAU)]
 
-        rnn = RNN_Stack(input_size=INPUT_SIZE,
-                        net_size=NET_SIZE,
-                        num_classes=NUM_CLASSES,
-                        bias=BIAS,
-                        num_readout_heads=NUM_READOUT_HEADS,
-                        tau=1.,
-                        train_tau=TRAIN_TAU
-                        ).to(device)
+        rnn = RNN_Stack(
+            input_size=INPUT_SIZE,
+            net_size=NET_SIZE,
+            num_classes=NUM_CLASSES,
+            bias=BIAS,
+            num_readout_heads=NUM_READOUT_HEADS,
+            tau=TAU,
+            train_tau=TRAIN_TAU,
+        ).to(device)
 
         rnn.to(device)
     else:
         print('Unrecognized model type: ', MODEL)
 
     # SGD Optimizer
-    # learning_rate = 0.05
-    # momentum = 0.1
     learning_rate = 0.05
-    momentum = 0.9
+    momentum = 0.1
     OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
 
 
