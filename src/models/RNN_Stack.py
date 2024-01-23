@@ -36,7 +36,6 @@ class RNN_Stack(nn.Module):
                  num_readout_heads=1,
                  tau=1.,
                  train_tau=False,
-                 init_tau=None,
                  ):
         super(RNN_Stack, self).__init__()
 
@@ -64,9 +63,6 @@ class RNN_Stack(nn.Module):
         else:
             # fixed tau
             self.taus = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
-        if init_tau is not None:
-            for i in range(len(net_size)):
-                self.taus[i].data = self.taus[i] * (init_tau / self.taus[i].data.mean())
 
         self.fc = [nn.Linear(net_size[-1], num_classes, bias=bias) for i in range(num_readout_heads)]
 

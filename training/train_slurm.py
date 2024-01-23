@@ -1,4 +1,3 @@
-import functools
 import sys
 import os
 
@@ -163,25 +162,20 @@ if __name__ == '__main__':
                         help='Number of heads to forget for the sliding window curriculum type. (int)')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed. (int)')
-    parser.add_argument('-dup', '--duplicate', type=int, dest='duplicate',
-                        help='Time discretization: duplicate samples this many times.')
-    parser.add_argument('-it', '--init_tau', type=float, dest='init_tau',
-                        help='Initial value of tau.')
 
-    parser.set_defaults(model_type='default',
-                        num_neurons=500,
-                        afunc='leakyrelu',
-                        curriculum_type='cumulative',
-                        task='parity',
-                        tau=None,
-                        network_number=1,
-                        init_heads=1,
-                        add_heads=1,
-                        forget_heads=1,
-                        seed=np.random.choice(2 ** 32),
-                        duplicate=1,
-                        init_tau=None,
-                        )
+    parser.set_defaults(
+        model_type='default',
+        num_neurons=500,
+        afunc='leakyrelu',
+        curriculum_type='cumulative',
+        task='parity',
+        tau=None,
+        network_number=1,
+        init_heads=1,
+        add_heads=1,
+        forget_heads=1,
+        seed=np.random.choice(2 ** 32),
+    )
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -202,12 +196,6 @@ if __name__ == '__main__':
     AFUNC = args.afunc
     CURRICULUM = args.curriculum_type
     TASK = args.task
-    DUPLICATE = args.duplicate
-    if DUPLICATE > 1:
-        AFFIXES.append(f'duplicate{DUPLICATE}')
-    INIT_TAU = args.init_tau
-    if INIT_TAU is not None:
-        AFFIXES.append(f'tau{INIT_TAU}')
     NETWORK_NUMBER = args.network_number
     TAU = args.tau
     if TAU is not None:
@@ -225,10 +213,7 @@ if __name__ == '__main__':
     np.random.seed(SEED)
     # Figure out which task
     if TASK == 'parity':
-        if DUPLICATE > 1:
-            task_function = functools.partial(tasks.make_batch_Nbit_pair_parity, duplicate=DUPLICATE)
-        else:
-            task_function = tasks.make_batch_Nbit_pair_parity
+        task_function = tasks.make_batch_Nbit_pair_parity
     elif TASK == 'dms':
         task_function = tasks.make_batch_multihead_dms
     else:
@@ -283,17 +268,16 @@ if __name__ == '__main__':
         else:
             print('Unrecognized activation function: ', AFUNC)
 
-        rnn = RNN_Mod(input_size=INPUT_SIZE,
-                        net_size=NET_SIZE,
-                        num_classes=NUM_CLASSES,
-                        bias=BIAS,
-                        num_readout_heads=NUM_READOUT_HEADS,
-                        tau=TAU,
-                        afunc=AFUNC,
-                        train_tau=TRAIN_TAU
-                        ).to(device)
-        if INIT_TAU is not None:
-            raise NotImplementedError('Init tau not implemented for mod model.')
+        rnn = RNN_Mod(
+            input_size=INPUT_SIZE,
+            net_size=NET_SIZE,
+            num_classes=NUM_CLASSES,
+            bias=BIAS,
+            num_readout_heads=NUM_READOUT_HEADS,
+            tau=TAU,
+            afunc=AFUNC,
+            train_tau=TRAIN_TAU,
+        ).to(device)
         rnn.to(device)
     elif MODEL == 'default':
 
@@ -302,15 +286,15 @@ if __name__ == '__main__':
         if TAU is not None:
            AFFIXES += ['T', str(TAU)]
 
-        rnn = RNN_Stack(input_size=INPUT_SIZE,
-                        net_size=NET_SIZE,
-                        num_classes=NUM_CLASSES,
-                        bias=BIAS,
-                        num_readout_heads=NUM_READOUT_HEADS,
-                        tau=TAU,
-                        train_tau=TRAIN_TAU,
-                        init_tau=INIT_TAU,
-                        ).to(device)
+        rnn = RNN_Stack(
+            input_size=INPUT_SIZE,
+            net_size=NET_SIZE,
+            num_classes=NUM_CLASSES,
+            bias=BIAS,
+            num_readout_heads=NUM_READOUT_HEADS,
+            tau=TAU,
+            train_tau=TRAIN_TAU,
+        ).to(device)
 
         rnn.to(device)
     else:
