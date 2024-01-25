@@ -33,3 +33,10 @@ More arguments through `python train_slurm_continous.py --help`.
 For analysis run
 - `exp003_test_correct.py`: computes and saves the accuracies
 - `exp006_plot_ICLR_suppl.py`: recreates the paper figure
+
+### LSTM analysis
+To train an LSTM on the tasks run the scripts inside lstm_training_and_timescales folder.
+
+### More scripts
+There is many more analysis and scripts available on the branch `duplicate-inputs`.
+We reduced the main branch to results that are in the publication.

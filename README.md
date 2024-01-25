@@ -2,7 +2,22 @@
 
 Codes for the implementation of the ICLR 2024 submission titled "Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks".
 
+## Cite
+If you use this code, please cite the following paper:
 
+```
+@misc{khajehabdollahi2023emergent,
+      title={Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks}, 
+      author={Sina Khajehabdollahi and Roxana Zeraati and Emmanouil Giannakakis and Tim Jakob Schäfer and Georg Martius and Anna Levina},
+      year={2023},
+      eprint={2309.12927},
+      archivePrefix={arXiv},
+      primaryClass={cs.NE}
+}
+```
+
+## Contact
+If you have any questions, please contact us through the corresponding author or on github.
 
 ## Requirements
 - Python: 3.7.13
@@ -63,6 +78,8 @@ Codes for running different analysis on trained networks. It includes:
 - Measuring $\tau$ and $\tau_{net}$
 - Measuring dimensionality of population activity using PCA
 - Running ablation and perturbation analysis
+- Continuous RNN training and analysis
+- LSTM training and analysis
 
 More details are provided in the README inside `./analysis`.
 
