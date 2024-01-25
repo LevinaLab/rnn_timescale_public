@@ -21,10 +21,10 @@ echo "---------- JOB INFOS ------------"
 scontrol show job $SLURM_JOB_ID
 echo "---------------------------------"
 
-save_path="/mnt/qb/levina/rnn_timescale_public/trained_models"
+save_path="/path/to/your/directory"
 
 # insert your commands here
 # takes the same arguments as train.py but instead of number of runs you need to label the run number manually with -n
 # e.g. python train.py -c cumulative -t parity -s 0 -n 0
-python "rnn_timescale_public/training/train.py" -b "$save_path" "$@"
+python "rnn_timescale_public/training/train_slurm_continuous.py" -b "$save_path" "$@"
 conda deactivate

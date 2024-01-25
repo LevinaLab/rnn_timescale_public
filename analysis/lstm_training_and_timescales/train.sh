@@ -10,7 +10,7 @@
 #SBATCH --output=logs/hostname_%j.out  # File to which STDOUT will be written - make sure this is not on $HOME
 #SBATCH --error=logs/datahostname_%j.err   # File to which STDERR will be written - make sure this is not on $HOME
 #SBATCH --mail-type=ALL           # Type of email notification- BEGIN,END,FAIL,ALL
-#SBATCH --mail-user=YOUR.EMAIL@EMAIL.COM   # Email to which notifications will be sent
+SBATCH --mail-user=YOUR.EMAIL@EMAIL.COM   # Email to which notifications will be sent
 
 # some bug
 source $HOME/.bashrc
@@ -21,10 +21,10 @@ echo "---------- JOB INFOS ------------"
 scontrol show job $SLURM_JOB_ID
 echo "---------------------------------"
 
-save_path="/mnt/qb/levina/rnn_timescale_public/trained_models"
+save_path="/path/to/your/directory"
 
 # insert your commands here
 # takes the same arguments as train.py but instead of number of runs you need to label the run number manually with -n
 # e.g. python train.py -c cumulative -t parity -s 0 -n 0
-python "rnn_timescale_public/training/train.py" -b "$save_path" "$@"
+python "rnn_timescale_public/analysis/lstm_training_and_timescales/lstm_multi_head_train.py" -b "$save_path" "$@"
 conda deactivate

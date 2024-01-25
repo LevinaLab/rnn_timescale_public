@@ -1,8 +1,23 @@
-# Check Your Timescales: Single-Neuron and Network-Mediated Mechanisms in Recurrent Networks for Long Memory Tasks
+# Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks (2024)
 
-Codes for the implementation of the NeurIPS 2023 submission titled "Check Your Timescales: Single-Neuron and Network-Mediated Mechanisms in Recurrent Networks for Long Memory Tasks".
+Codes for the implementation of the ICLR 2024 submission titled "Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks".
 
+## Cite
+If you use this code, please cite the following paper:
 
+```
+@misc{khajehabdollahi2023emergent,
+      title={Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks}, 
+      author={Sina Khajehabdollahi and Roxana Zeraati and Emmanouil Giannakakis and Tim Jakob Schäfer and Georg Martius and Anna Levina},
+      year={2023},
+      eprint={2309.12927},
+      archivePrefix={arXiv},
+      primaryClass={cs.NE}
+}
+```
+
+## Contact
+If you have any questions, please contact us through the corresponding author or on github.
 
 ## Requirements
 - Python: 3.7.13
@@ -18,13 +33,19 @@ Codes for the implementation of the NeurIPS 2023 submission titled "Check Your T
 
 
 ## Training
-To train a model, run, `cd ./training` `python train.py --{args}`.
+To train a model, run `python training/train.py --{args}`.
 The script accepts the following arguments:
 
     -h, --help: Show the help message and exit.
-    -c, --curriculum_type, str: Specify the curriculum type: (cumulative, sliding, single).
-    -t, --task, str: Specify the task: (parity, dms).
-    -r, --runs, int: Number of independent runs.
+    -b, --base_path, str: The base path to save results.
+    -m, --model_type, str: Standard RNN model or modified location of non-linearity ([default], mod)
+    -a, --afunc, str: Activation functions: ([leakyrelu], relu, tanh, sigmoid)
+    -nn, --num_neurons, int: The number of hidden neurons in the RNN. 
+    -ni, --ns_init, int: The starting value of N for the task [default=2].
+    -c, --curriculum_type, str: Specify the curriculum type: ([cumulative], sliding, single).
+    -n, --network_number, int: 'The run number of the network, to be used as a naming suffix for savefiles.
+    -t, --task, str: Specify the task: ([parity], dms).
+    -T, --tau, float: The value of tau each neuron starts with. If set, taus will not be trainable. Default = None. (float > 1)
     -ih, --init_heads int: Number of heads to start with.
     -dh, --add_heads int: Number of heads to add per new curricula.
     -fh, --forget_heads int: Number of heads to forget for the sliding window curriculum type.
@@ -32,13 +53,16 @@ The script accepts the following arguments:
 
 For example
 
-```python train.py -c cumulative -t parity -s 0```
+```python training/train.py -c cumulative -t parity -s 0 -b "../trained_models"```
 
 If an argument is not provided, the script uses the following default values:
-
+    
+    model_type: default
+    activation_function: 'leakyrelu'
+    num_neurons: 500
     curriculum_type: cumulative
     task: parity
-    runs: 1
+    tau: 1.
     init_heads: 1
     add_heads: 1
     forget_heads: 1
@@ -54,6 +78,8 @@ Codes for running different analysis on trained networks. It includes:
 - Measuring $\tau$ and $\tau_{net}$
 - Measuring dimensionality of population activity using PCA
 - Running ablation and perturbation analysis
+- Continuous RNN training and analysis
+- LSTM training and analysis
 
 More details are provided in the README inside `./analysis`.
 
@@ -69,7 +95,7 @@ The naming convention for the saved models is:
 
 
 To load a model, import the ```load_model``` function ```from src.utils import load_model```
-which takes the following arguments
+which takes the following arguments:
 
     curriculum_type (str): 'cumulative' (a.k.a. multi-head)
                             f'sliding_{n_heads}_{n_forget}' (a.k.a. multi-head sliding)
@@ -79,4 +105,6 @@ which takes the following arguments
     N_max (int): N that the network should be able to solve (N_max = N_min for curriculum_type='single')
     N_min (int): minimum N, potentially depending on curriculum_type
 
-For example: ```load_model('cumulative', 'parity', 1, 2, 50)```
+For example: ```load_model(curriculum_type='cumulative', task='parity', network_number=1, N_min=2, N_max=50)```
+
+

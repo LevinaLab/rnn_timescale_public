@@ -20,6 +20,7 @@ def calculate_accuracy(
         base_path,
         p_input=0.5,
         trained_task="parity",
+        load_args=None,
 ):
     """Calculate accuracy of a perturbed or ablated network.
 
@@ -46,6 +47,8 @@ def calculate_accuracy(
     Returns:
         list[float]: accuracies (length n_trials)
     """
+    if load_args is None:
+        load_args = {}
     try:
         rnn_load = load_model(
             curriculum_type=network_type,
@@ -53,6 +56,7 @@ def calculate_accuracy(
             network_number=network_name,
             N_max=N,
             base_path=base_path,
+            **load_args,
         )
         if network_type == 'single':
             index_in_head = 0

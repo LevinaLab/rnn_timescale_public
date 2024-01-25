@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import os
-from src.models import init_model, init_model_mod
+from src.models import init_model, init_model_mod, init_model_continuous
 
 
 def load_model(
@@ -14,9 +14,12 @@ def load_model(
         base_path="./trained_models",
         strict=False,
         mod_model=False,
+        n_heads: int = 1,
+        n_forget: int = 1,
+        continuous_model=False,
         mod_afunc=nn.LeakyReLU,
         num_classes=2,
-        affixes = []
+        affixes=[],
 ):
     """Load the RNNs for the given type and network_name.
 
@@ -38,13 +41,9 @@ def load_model(
 
     # TODO: fix for sliding window
     if curriculum_type == 'sliding':
-        rnn_subdir = os.path.join(
-            f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
-        )
+        rnn_subdir = f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
     else:
-        rnn_subdir = os.path.join(
-            f'{curriculum_type}_{task}{affix_str}network_{network_number}'
-        )
+        rnn_subdir = f'{curriculum_type}_{task}{affix_str}network_{network_number}'
     
     rnn_path = os.path.join(
         base_path,
@@ -52,9 +51,14 @@ def load_model(
         f'rnn_N{N_min:d}_N{N_max:d}',
     )
     if mod_model:
+        assert not continuous_model, ("Cannot have both mod_model and continuous_model,"
+                                      " continuous_model is implicitly mod_model")
         rnn = init_model_mod(A_FUNC=mod_afunc, NUM_CLASSES=num_classes, DEVICE=device)
     else:
-        rnn = init_model(NUM_CLASSES=num_classes, DEVICE=device)
+        if continuous_model:
+            rnn = init_model_continuous(DEVICE=device)
+        else:
+            rnn = init_model(NUM_CLASSES=num_classes, DEVICE=device)
     rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'], strict = strict)
     return rnn
 
