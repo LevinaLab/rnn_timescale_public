@@ -14,15 +14,16 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 
-from src.models import RNN_Stack
+from src.models.RNN_hier import RNN_Hierarchical
 import src.tasks as tasks
 from src.utils import save_model
+
 
 def train(model,
           curriculum_type,
           task,
           num_epochs,
-          Ns,
+          Ns,  # List of parities that are being trained/tested. Grows with curriculum.
           run_number):
 
     # stats
@@ -115,6 +116,10 @@ def train(model,
                 if curriculum_type == 'single':
                     Ns = [Ns[0] + 1]
 
+                if curriculum_type == 'grow':
+                    Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
+                    model.current_depth += 1
+
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
     return stats
@@ -191,18 +196,22 @@ if __name__ == '__main__':
     elif CURRICULUM == 'single':
         Ns_init = [2]
         INIT_HEADS = 1
-        NUM_FORGET = 1
+        NUM_FORGET = 1  # todo: This doesn't appear to be used when curriculum_type == 'single', not sure why it's declared here.
+    elif CURRICULUM == 'grow':
+        Ns_init = [2]
+        INIT_HEADS = 1
     else:
-        print('Unrecognized curriculum type: ', CURRICULUM)
+        raise Exception(f'Unrecognized curriculum type: {CURRICULUM}')
     ###############################################################
 
     # MODEL PARAMS
     INPUT_SIZE = 1
-    NET_SIZE = [500]
+    NET_SIZE = [100]
     NUM_CLASSES = 2
     BIAS = True
-    NUM_READOUT_HEADS = 100
-    TRAIN_TAU = True
+    NUM_READOUT_HEADS_PER_MOD = 1
+    # NUM_READOUT_HEADS = 100
+    TRAIN_TAU = False
 
     # TRAINING PARAMS
     NUM_EPOCHS = 1000
@@ -214,15 +223,14 @@ if __name__ == '__main__':
 
     for r_idx in range(1, RUNS+1):
         # init new model
-        rnn = RNN_Stack(input_size=INPUT_SIZE,
-                        net_size=NET_SIZE,
-                        num_classes=NUM_CLASSES,
-                        bias=BIAS,
-                        num_readout_heads=NUM_READOUT_HEADS,
-                        tau=1.,
-                        train_tau=TRAIN_TAU
-                        ).to(device)
-
+        rnn = RNN_Hierarchical(input_size=INPUT_SIZE,
+                               net_size=NET_SIZE,
+                               num_classes=NUM_CLASSES,
+                               bias=BIAS,
+                               num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
+                               tau=1.,
+                               train_tau=TRAIN_TAU
+                               ).to(device)
         rnn.to(device)
 
 
@@ -231,7 +239,6 @@ if __name__ == '__main__':
         momentum = 0.1
         OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
 
-
         stats = train(rnn,
                       curriculum_type=CURRICULUM,
                       task=TASK,
@@ -239,4 +246,3 @@ if __name__ == '__main__':
                       Ns=Ns_init,
                       run_number=r_idx
                       )
-

@@ -37,7 +37,7 @@ class RNN_Hierarchical(nn.Module):
                  net_size=[100],
                  num_classes=2,
                  bias=True,
-                 num_readout_heads=1,
+                 num_readout_heads_per_mod=1,
                  tau=1.,
                  train_tau=False,
                  ):
@@ -47,11 +47,11 @@ class RNN_Hierarchical(nn.Module):
         self.net_size = net_size
         self.num_classes = num_classes
         self.bias = bias
-        self.num_readout_heads = num_readout_heads
+        self.num_readout_heads_per_mod = num_readout_heads_per_mod
         self.tau = tau
         self.train_tau = train_tau
         self.depth = depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
-        self.current_depth = 0
+        self.current_depth = 1  # The network starts with a single module and therefore depth=1.
 
         self.afunc = nn.LeakyReLU()
 
@@ -84,8 +84,7 @@ class RNN_Hierarchical(nn.Module):
             for k, v in self.module_dict[d].items():
                 self.modules.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
 
-
-    def forward(self, data, hier_signal, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
+    def forward(self, data, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
         '''
         input: data [batch_size, sequence length, input_features]
         output:
@@ -103,10 +102,10 @@ class RNN_Hierarchical(nn.Module):
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
             net_hs = []
             for d in range(self.current_depth):
-                hs = [0.1 * torch.rand(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
+                hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in self.net_size]
                 net_hs.append(hs)
 
-        net_hs_t = [[h.clone() for h in hs] for hs in net_hs]
+        net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere!!
         net_x = []
         for d in range(self.current_depth):
             # todo: what does this stack().mean() do? Why would ther be any averaging anyways?
@@ -124,25 +123,34 @@ class RNN_Hierarchical(nn.Module):
             inp = x[t, ...]
 
             for j in range(self.current_depth):
+
                 hs = net_hs[j]
                 taus = self.module_dict[j]['taus']
                 w_hh = self.module_dict[j]['w_hh']
                 w_ff_in = self.module_dict[j]['w_ff_in']
+                if j == 0:
+                    # if we are in the first module, we don't have any input from the previous module
+                    hier_signal = 0
+                else:
+                    # if we are in the second module or higher, we have input from the previous (j-1) module
+                    # todo: '-1' implies only the last layer of each module that's fed forward to the next module. Is this correct?
+                    hier_signal = w_ff_in(net_hs[j - 1][-1])  # todo: no non-linearity for feed-forward connections?
                 for i in range(len(self.net_size)):  # net_size is normally just 1.
                     if self.train_tau:
                         raise NotImplementedError
                     else:
                         ## with fixed tau
+                        # Note: Every layer in the module gets the hier_signal from previous module. #todo: correct?
                         if i == 0:
                             hs[i] = (1 - 1/taus[i]) * hs[i] + \
-                                    (w_hh[i](hs[i]) + w_ff_in(hier_signal) + inp)/(taus[i])
+                                    (w_hh[i](hs[i]) + hier_signal + inp)/(taus[i])
                         else:
                             hs[i] = (1 - 1/(taus[i])) * hs[i] + \
                                     (w_hh[i](hs[i]) + w_ff_in[i-1](hs[i-1]) +
-                                     w_ff_in(hier_signal) + inp)/(taus[i])
+                                     hier_signal + inp)/(taus[i])
 
                     hs[i] = self.afunc(hs[i])
-            if savetime: # todo: why append? Do we want to want to save the hidden layers' states before and after the update?
+            if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
                 net_hs_t.append([[h.clone() for h in hs] for hs in net_hs])
             # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
@@ -169,7 +177,7 @@ def init_model(
     DEPTH = 10,
     NUM_CLASSES=2,
     BIAS=True,
-    NUM_READOUT_HEADS=100,
+    NUM_READOUT_HEADS_PER_MOD=1,
     TRAIN_TAU=True,
     DEVICE='cpu',
 ):
@@ -179,7 +187,7 @@ def init_model(
                     net_size=NET_SIZE,
                     num_classes=NUM_CLASSES,
                     bias=BIAS,
-                    num_readout_heads=NUM_READOUT_HEADS,
+                    num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
                     tau=1.,
                     train_tau=TRAIN_TAU
                     ).to(DEVICE)
