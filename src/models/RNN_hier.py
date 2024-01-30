@@ -55,8 +55,7 @@ class RNN_Hierarchical(nn.Module):
 
         self.afunc = nn.LeakyReLU()
 
-        self.module_dict = defaultdict(dict)  # module_dict[network][layer] = layer_object
-        self.modules = nn.ModuleList()
+        self.module_dict = defaultdict(dict)  # module_dict[network][layer] = layer_object  # todo: should probably use nn.ModuleDict() instead. BUt likely doesn't support nested dicts. Can get around it using tuple keys: (module number[int], parameter name[str])
 
         for d in range(self.max_depth):
 
@@ -72,17 +71,23 @@ class RNN_Hierarchical(nn.Module):
 
             # setting the single neuron tau
             if self.train_tau:
-                # fixed trainble tau
-                self.module_dict[d]['taus'] = [nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
+                # fixed trainble tau  # todo: is this fixed or trainable? It can't be both.
+                self.taus = [nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
             else:
                 # fixed tau
-                self.module_dict[d]['taus'] = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
+                self.taus = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
 
-            self.module_dict[d]['fc'] = [nn.Linear(net_size[-1], num_classes, bias=bias) for i in range(num_readout_heads)]
+            # todo: for 'grow' curriculum it only makes sense to have 1 read out head per module, each with their own fc parameter sets.
+            self.module_dict[d]['fc'] = [nn.Linear(net_size[-1], num_classes, bias=bias)]
 
-            self.parameterlist = nn.ParameterList(self.module_dict[j]['taus'])  # todo: what is this good for? it's not used anywhere.
-            for k, v in self.module_dict[d].items():
-                self.modules.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
+            self.parameter_list = nn.ParameterList(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
+
+            l = []
+        for k, v in self.module_dict[d].items():
+            # print(d, k, v, type(v))
+            l.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
+        self.module_list = nn.ModuleList(l)
+
 
     def forward(self, data, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
         '''
@@ -122,7 +127,7 @@ class RNN_Hierarchical(nn.Module):
         for t in range(data.size(0)):
             inp = x[t, ...]
 
-            for j in range(self.current_depth):
+            for d in range(self.current_depth):
 
                 hs = net_hs[d]
                 taus = self.module_dict[d]['taus']
@@ -149,7 +154,6 @@ class RNN_Hierarchical(nn.Module):
                             hs[i] = (1 - 1/(taus[i])) * hs[i] + \
                                     self.afunc(w_hh[i](hs[i]) + hier_signal + inp)/(taus[i])
 
-                    hs[i] = self.afunc(hs[i])
             if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
                 net_hs_t.append([[h.clone() for h in hs] for hs in net_hs])
