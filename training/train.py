@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed.')
 
-    parser.set_defaults(curriculum_type='cumulative',
+    parser.set_defaults(curriculum_type='grow',
                         task='parity',
                         runs=1,
                         init_heads=1,
@@ -223,14 +223,15 @@ if __name__ == '__main__':
 
     for r_idx in range(1, RUNS+1):
         # init new model
-        rnn = RNN_Hierarchical(input_size=INPUT_SIZE,
+        rnn = RNN_Hierarchical(max_depth=5,
+                               input_size=INPUT_SIZE,
                                net_size=NET_SIZE,
                                num_classes=NUM_CLASSES,
                                bias=BIAS,
                                num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
                                tau=1.,
                                train_tau=TRAIN_TAU
-                               ).to(device)
+                               )
         rnn.to(device)
 
 
