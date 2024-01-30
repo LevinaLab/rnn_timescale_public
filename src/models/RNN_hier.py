@@ -65,10 +65,10 @@ class RNN_Hierarchical(nn.Module):
             self.module_dict[d]['w_hh'] = [nn.Linear(net_size[i], net_size[i], bias=bias)
                                            for i in range(len(net_size))]
 
-
             # forward connections from another module in the hierarchy
-            # todo: assumes that the superior module is single layer and of the same size as this current module
-            self.module_dict[d]['w_ff_in'] = nn.Linear(net_size[0], net_size[0], bias=bias)
+            if d > 0:
+                # only defined for d > 0 since the very first module doesn't receive any inputs other than input data.
+                self.module_dict[d]['w_ff_in'] = [nn.Linear(net_size[-1], net_size[0], bias=bias)]  # make this a list for consistency, even though only one element.
 
             # setting the single neuron tau
             if self.train_tau:
@@ -124,17 +124,18 @@ class RNN_Hierarchical(nn.Module):
 
             for j in range(self.current_depth):
 
-                hs = net_hs[j]
-                taus = self.module_dict[j]['taus']
-                w_hh = self.module_dict[j]['w_hh']
-                w_ff_in = self.module_dict[j]['w_ff_in']
-                if j == 0:
-                    # if we are in the first module, we don't have any input from the previous module
-                    hier_signal = 0
-                else:
+                hs = net_hs[d]
+                taus = self.module_dict[d]['taus']
+                w_hh = self.module_dict[d]['w_hh']
+
+                if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
+                    w_ff_in = self.module_dict[d]['w_ff_in']
                     # todo: '-1' implies only the last layer of each module that's fed forward to the next module. Is this correct?
-                    hier_signal = w_ff_in(net_hs[j - 1][-1])  # todo: no non-linearity for feed-forward connections?
+                    hier_signal = w_ff_in(net_hs[d - 1][-1])  # todo: no non-linearity for feed-forward connections?
+                else:
+                    hier_signal = 0
+
                 for i in range(len(self.net_size)):  # net_size is normally just 1.
                     if self.train_tau:
                         raise NotImplementedError
@@ -143,11 +144,10 @@ class RNN_Hierarchical(nn.Module):
                         # Note: Every layer in the module gets the hier_signal from previous module. #todo: correct?
                         if i == 0:
                             hs[i] = (1 - 1/taus[i]) * hs[i] + \
-                                    (w_hh[i](hs[i]) + hier_signal + inp)/(taus[i])
+                                    self.afunc(w_hh[i](hs[i]) + inp)/(taus[i])
                         else:
                             hs[i] = (1 - 1/(taus[i])) * hs[i] + \
-                                    (w_hh[i](hs[i]) + w_ff_in[i-1](hs[i-1]) +
-                                     hier_signal + inp)/(taus[i])
+                                    self.afunc(w_hh[i](hs[i]) + hier_signal + inp)/(taus[i])
 
                     hs[i] = self.afunc(hs[i])
             if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
