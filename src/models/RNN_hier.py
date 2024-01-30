@@ -32,7 +32,7 @@ class RNN_Hierarchical(nn.Module):
         if we train the taus
     '''
 
-    def __init__(self, depth=1,  # how many "modules" there are in the hierarchy.
+    def __init__(self, max_depth=5,  # how many "modules" there are in the hierarchy.
                  input_size=28,
                  net_size=[100],
                  num_classes=2,
@@ -50,7 +50,7 @@ class RNN_Hierarchical(nn.Module):
         self.num_readout_heads_per_mod = num_readout_heads_per_mod
         self.tau = tau
         self.train_tau = train_tau
-        self.depth = depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
+        self.max_depth = max_depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
         self.current_depth = 1  # The network starts with a single module and therefore depth=1.
 
         self.afunc = nn.LeakyReLU()
@@ -58,7 +58,7 @@ class RNN_Hierarchical(nn.Module):
         self.module_dict = defaultdict(dict)  # module_dict[network][layer] = layer_object
         self.modules = nn.ModuleList()
 
-        for d in range(depth):
+        for d in range(self.max_depth):
 
             self.module_dict[d]['input_layers'] = [nn.Linear(input_size, net_size[0], bias=bias)]
             # recurrent connections
@@ -182,14 +182,14 @@ def init_model(
     DEVICE='cpu',
 ):
     # init new model
-    rnn = RNN_Hierarchical(depth=1,
-                    input_size=INPUT_SIZE,
-                    net_size=NET_SIZE,
-                    num_classes=NUM_CLASSES,
-                    bias=BIAS,
-                    num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
-                    tau=1.,
-                    train_tau=TRAIN_TAU
-                    ).to(DEVICE)
+    rnn = RNN_Hierarchical(max_depth=5,
+                           input_size=INPUT_SIZE,
+                           net_size=NET_SIZE,
+                           num_classes=NUM_CLASSES,
+                           bias=BIAS,
+                           num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
+                           tau=1.,
+                           train_tau=TRAIN_TAU
+                           ).to(DEVICE)
 
     return rnn
