@@ -55,38 +55,39 @@ class RNN_Hierarchical(nn.Module):
 
         self.afunc = nn.LeakyReLU()
 
-        self.module_dict = defaultdict(dict)  # module_dict[network][layer] = layer_object  # todo: should probably use nn.ModuleDict() instead. BUt likely doesn't support nested dicts. Can get around it using tuple keys: (module number[int], parameter name[str])
+        self.module_dict = defaultdict()  # module_dict[network][layer] = layer_object  # todo: should probably use nn.ModuleDict() instead. BUt likely doesn't support nested dicts. Can get around it using tuple keys: (module number[int], parameter name[str])
 
         for d in range(self.max_depth):
 
-            self.module_dict[d]['input_layers'] = [nn.Linear(input_size, net_size[0], bias=bias)]
+            self.module_dict[f'{d}:input_layers'] = nn.Linear(input_size, net_size[0], bias=bias)
             # recurrent connections
-            self.module_dict[d]['w_hh'] = [nn.Linear(net_size[i], net_size[i], bias=bias)
-                                           for i in range(len(net_size))]
+            self.module_dict[f'{d}:w_hh'] = nn.Linear(net_size[0], net_size[0], bias=bias)
+                                           #for i in range(len(net_size))]
 
             # forward connections from another module in the hierarchy
             if d > 0:
                 # only defined for d > 0 since the very first module doesn't receive any inputs other than input data.
-                self.module_dict[d]['w_ff_in'] = [nn.Linear(net_size[-1], net_size[0], bias=bias)]  # make this a list for consistency, even though only one element.
+                self.module_dict[f'{d}:w_ff_in'] = nn.Linear(net_size[-1], net_size[0], bias=bias)  # make this a list for consistency, even though only one element.
 
             # setting the single neuron tau
-            if self.train_tau:
+            if self.train_tau: # todo: specify the depth
                 # fixed trainble tau  # todo: is this fixed or trainable? It can't be both.
-                self.taus = [nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))]
+                self.taus = {f'{d}': nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))}
             else:
                 # fixed tau
-                self.taus = [nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))]
+                self.taus = {f'{d}': nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))}
 
             # todo: for 'grow' curriculum it only makes sense to have 1 read out head per module, each with their own fc parameter sets.
-            self.module_dict[d]['fc'] = [nn.Linear(net_size[-1], num_classes, bias=bias)]
+            self.module_dict[f'{d}:fc'] = nn.Linear(net_size[-1], num_classes, bias=bias)
 
-            self.parameter_list = nn.ParameterList(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
 
-            l = []
-        for k, v in self.module_dict[d].items():
-            # print(d, k, v, type(v))
-            l.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
-        self.module_list = nn.ModuleList(l)
+            self.parameter_dict = nn.ParameterDict(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
+
+        # l = []
+        # for k, v in self.module_dict.items():
+        #     # print(d, k, v, type(v))
+        #     l.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
+        self.module_dict_torch = nn.ModuleDict(self.module_dict)
 
 
     def forward(self, data, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
@@ -114,7 +115,7 @@ class RNN_Hierarchical(nn.Module):
         net_x = []
         for d in range(self.current_depth):
             # todo: what does this stack().mean() do? Why would ther be any averaging anyways?
-            x = torch.stack([input_layer(data) for input_layer in self.module_dict[d]['input_layers']]).mean(dim=0) # [ *, H_in] -> [*, H_out]
+            x = torch.stack([input_layer(data) for input_layer in self.module_dict[f'{d}:input_layers']]).mean(dim=0) # [ *, H_in] -> [*, H_out]
             net_x.append(x)
         # if classify_in_time: # todo: this seems to be always False in the existing training code so i'll remove.
         out = []
@@ -122,7 +123,7 @@ class RNN_Hierarchical(nn.Module):
         # putting self connenctions to zero
         for d in range(self.current_depth):
             for i in range(len(self.net_size)):
-                self.module_dict[d]['w_hh'][i].weight.data.fill_diagonal_(0.)
+                self.module_dict[f'{d}:w_hh'][i].weight.data.fill_diagonal_(0.)
 
         for t in range(data.size(0)):
             inp = x[t, ...]
@@ -130,12 +131,12 @@ class RNN_Hierarchical(nn.Module):
             for d in range(self.current_depth):
 
                 hs = net_hs[d]
-                taus = self.module_dict[d]['taus']
-                w_hh = self.module_dict[d]['w_hh']
+                taus = self.parameter_dict[f'{d}']
+                w_hh = self.module_dict[f'{d}:w_hh']
 
                 if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
-                    w_ff_in = self.module_dict[d]['w_ff_in']
+                    w_ff_in = self.module_dict[(f'{d}:w_ff_in')]
                     # todo: '-1' implies only the last layer of each module that's fed forward to the next module. Is this correct?
                     hier_signal = w_ff_in(net_hs[d - 1][-1])  # todo: no non-linearity for feed-forward connections?
                 else:
@@ -163,11 +164,11 @@ class RNN_Hierarchical(nn.Module):
             #     else:
             #         out.append([self.fc[index_in_head](hs[-1])])
 
-        if not classify_in_time:
-            if index_in_head is None:
-                out = [self.module_dict['fc'][i](hs[-1]) for i in range(self.current_depth)]
-            else:
-                out = [self.module_dict['fc'][index_in_head](hs[-1])]
+            if not classify_in_time:
+                if index_in_head is None:
+                    out = [self.module_dict[(d, 'fc')][0](hs[-1]) for d in range(self.current_depth)]
+                else:
+                    out = [self.module_dict[(d, 'fc')][index_in_head](hs[-1])]
 
         if savetime:
             return net_hs_t, out
