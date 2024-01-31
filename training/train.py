@@ -15,6 +15,7 @@ import argparse
 from tqdm import tqdm
 
 from src.models.RNN_hier import RNN_Hierarchical
+from src.models.RNN_Stack import RNN_Stack
 import src.tasks as tasks
 from src.utils import save_model
 
@@ -133,6 +134,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Add arguments to the parser
+    parser.add_argument('-a', '--agent_type', type=str, dest='agent_type',
+                        help='agent type: (hierarchical, stack)')
     parser.add_argument('-c', '--curriculum_type', type=str, dest='curriculum_type',
                         help='Curriculum type: (cumulative, sliding, single)')
     parser.add_argument('-t', '--task', type=str, dest='task',
@@ -148,7 +151,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed.')
 
-    parser.set_defaults(curriculum_type='grow',
+    parser.set_defaults(agent_type='hierarchical',
+                        curriculum_type='grow',
                         task='parity',
                         runs=1,
                         init_heads=1,
@@ -161,6 +165,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Access the values of the arguments
+    print('agent_type:', args.agent_type)
     print('curriculum_type:', args.curriculum_type)
     print('task:', args.task)
     print('runs:', args.runs)
@@ -210,7 +215,7 @@ if __name__ == '__main__':
     NUM_CLASSES = 2
     BIAS = True
     NUM_READOUT_HEADS_PER_MOD = 1
-    # NUM_READOUT_HEADS = 100
+    NUM_READOUT_HEADS = 100
     TRAIN_TAU = False
 
     # TRAINING PARAMS
@@ -223,15 +228,25 @@ if __name__ == '__main__':
 
     for r_idx in range(1, RUNS+1):
         # init new model
-        rnn = RNN_Hierarchical(max_depth=5,
-                               input_size=INPUT_SIZE,
-                               net_size=NET_SIZE,
-                               num_classes=NUM_CLASSES,
-                               bias=BIAS,
-                               num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
-                               tau=1.,
-                               train_tau=TRAIN_TAU
-                               )
+        if args.agent_type == 'hierarchical':
+            rnn = RNN_Hierarchical(max_depth=5,
+                                   input_size=INPUT_SIZE,
+                                   net_size=NET_SIZE,
+                                   num_classes=NUM_CLASSES,
+                                   bias=BIAS,
+                                   num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
+                                   tau=1.,
+                                   train_tau=TRAIN_TAU
+                                   )
+        elif args.agent_type == 'stack':
+            rnn = RNN_Stack(input_size=INPUT_SIZE,
+                            net_size=NET_SIZE,
+                            num_classes=NUM_CLASSES,
+                            bias=BIAS,
+                            num_readout_heads=NUM_READOUT_HEADS,
+                            tau=1.,
+                            train_tau=TRAIN_TAU
+                            )
         rnn.to(device)
 
 
