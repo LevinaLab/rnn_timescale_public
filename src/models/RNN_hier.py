@@ -54,40 +54,41 @@ class RNN_Hierarchical(nn.Module):
         self.current_depth = 1  # The network starts with a single module and therefore depth=1.
 
         self.afunc = nn.LeakyReLU()
-
-        self.module_dict = defaultdict()  # module_dict[network][layer] = layer_object  # todo: should probably use nn.ModuleDict() instead. BUt likely doesn't support nested dicts. Can get around it using tuple keys: (module number[int], parameter name[str])
+        self.taus = defaultdict()
+        self.modules = defaultdict()  # module_dict[network][layer] = layer_object  # todo: should probably use nn.ModuleDict() instead. BUt likely doesn't support nested dicts. Can get around it using tuple keys: (module number[int], parameter name[str])
 
         for d in range(self.max_depth):
-
-            self.module_dict[f'{d}:input_layers'] = nn.Linear(input_size, net_size[0], bias=bias)
+            # todo: for now just do single layer modules. Later we can add multi-layer modules.
+            self.modules[f'{d}:input_layers'] = nn.Linear(input_size, net_size[0], bias=bias)
             # recurrent connections
-            self.module_dict[f'{d}:w_hh'] = nn.Linear(net_size[0], net_size[0], bias=bias)
+            self.modules[f'{d}:w_hh'] = nn.Linear(net_size[0], net_size[0], bias=bias)
                                            #for i in range(len(net_size))]
 
             # forward connections from another module in the hierarchy
             if d > 0:
                 # only defined for d > 0 since the very first module doesn't receive any inputs other than input data.
-                self.module_dict[f'{d}:w_ff_in'] = nn.Linear(net_size[-1], net_size[0], bias=bias)  # make this a list for consistency, even though only one element.
+                self.modules[f'{d}:w_ff_in'] = nn.Linear(net_size[-1], net_size[0], bias=bias)  # make this a list for consistency, even though only one element.
 
             # setting the single neuron tau
             if self.train_tau: # todo: specify the depth
                 # fixed trainble tau  # todo: is this fixed or trainable? It can't be both.
-                self.taus = {f'{d}': nn.Parameter(1 + 1. * torch.rand(net_size[i]), requires_grad=True) for i in range(len(net_size))}
+                self.taus[f'{d}'] = nn.Parameter(1 + 1. * torch.rand(net_size[0]), requires_grad=True)
             else:
                 # fixed tau
-                self.taus = {f'{d}': nn.Parameter(torch.Tensor([self.tau]), requires_grad=False) for i in range(len(net_size))}
+                self.taus[f'{d}'] = nn.Parameter(torch.Tensor([self.tau]), requires_grad=False)
 
             # todo: for 'grow' curriculum it only makes sense to have 1 read out head per module, each with their own fc parameter sets.
-            self.module_dict[f'{d}:fc'] = nn.Linear(net_size[-1], num_classes, bias=bias)
+            self.modules[f'{d}:fc'] = nn.Linear(net_size[-1], num_classes, bias=bias)
 
 
-            self.parameter_dict = nn.ParameterDict(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
 
         # l = []
         # for k, v in self.module_dict.items():
         #     # print(d, k, v, type(v))
         #     l.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
-        self.module_dict_torch = nn.ModuleDict(self.module_dict)
+        self.parameter_dict = nn.ParameterDict(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
+
+        self.module_dict = nn.ModuleDict(self.modules)
 
 
     def forward(self, data, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
@@ -111,11 +112,11 @@ class RNN_Hierarchical(nn.Module):
                 hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in self.net_size]
                 net_hs.append(hs)
 
-        net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere!!
+        net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
         net_x = []
         for d in range(self.current_depth):
             # todo: what does this stack().mean() do? Why would ther be any averaging anyways?
-            x = torch.stack([input_layer(data) for input_layer in self.module_dict[f'{d}:input_layers']]).mean(dim=0) # [ *, H_in] -> [*, H_out]
+            x = torch.stack([self.modules[f'{d}:input_layers'](data)]).mean(dim=0) # [ *, H_in] -> [*, H_out]
             net_x.append(x)
         # if classify_in_time: # todo: this seems to be always False in the existing training code so i'll remove.
         out = []
@@ -123,20 +124,20 @@ class RNN_Hierarchical(nn.Module):
         # putting self connenctions to zero
         for d in range(self.current_depth):
             for i in range(len(self.net_size)):
-                self.module_dict[f'{d}:w_hh'][i].weight.data.fill_diagonal_(0.)
+                self.modules[f'{d}:w_hh'].weight.data.fill_diagonal_(0.)
 
         for t in range(data.size(0)):
             inp = x[t, ...]
 
             for d in range(self.current_depth):
 
-                hs = net_hs[d]
+                hs = net_hs[d][0]  # todo: for now just do 1-layer modules and get the values from this single layer immediately
                 taus = self.parameter_dict[f'{d}']
-                w_hh = self.module_dict[f'{d}:w_hh']
+                w_hh = self.modules[f'{d}:w_hh']
 
                 if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
-                    w_ff_in = self.module_dict[(f'{d}:w_ff_in')]
+                    w_ff_in = self.modules[(f'{d}:w_ff_in')]
                     # todo: '-1' implies only the last layer of each module that's fed forward to the next module. Is this correct?
                     hier_signal = w_ff_in(net_hs[d - 1][-1])  # todo: no non-linearity for feed-forward connections?
                 else:
@@ -149,11 +150,11 @@ class RNN_Hierarchical(nn.Module):
                         ## with fixed tau
                         # Note: Every layer in the module gets the hier_signal from previous module. #todo: correct?
                         if i == 0:
-                            hs[i] = (1 - 1/taus[i]) * hs[i] + \
-                                    self.afunc(w_hh[i](hs[i]) + inp)/(taus[i])
+                            hs = (1 - 1/taus) * hs + \
+                                    self.afunc(w_hh(hs) + inp)/(taus)
                         else:
-                            hs[i] = (1 - 1/(taus[i])) * hs[i] + \
-                                    self.afunc(w_hh[i](hs[i]) + hier_signal + inp)/(taus[i])
+                            hs = (1 - 1/(taus)) * hs + \
+                                    self.afunc(w_hh(hs) + hier_signal + inp)/(taus)
 
             if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
@@ -166,9 +167,9 @@ class RNN_Hierarchical(nn.Module):
 
             if not classify_in_time:
                 if index_in_head is None:
-                    out = [self.module_dict[(d, 'fc')][0](hs[-1]) for d in range(self.current_depth)]
+                    out = [self.modules[f'{d}:fc'](hs) for d in range(self.current_depth)]
                 else:
-                    out = [self.module_dict[(d, 'fc')][index_in_head](hs[-1])]
+                    out = [self.modules[f'{d}:fc'][index_in_head](hs)]
 
         if savetime:
             return net_hs_t, out
