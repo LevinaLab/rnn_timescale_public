@@ -48,7 +48,7 @@ class RNN_Hierarchical(nn.Module):
         self.num_classes = num_classes
         self.bias = bias
         self.num_readout_heads_per_mod = num_readout_heads_per_mod
-        self.tau = tau
+        self.fixed_tau = tau
         self.train_tau = train_tau
         self.max_depth = max_depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
         self.current_depth = 1  # The network starts with a single module and therefore depth=1.
@@ -75,7 +75,7 @@ class RNN_Hierarchical(nn.Module):
                 self.taus[f'{d}'] = nn.Parameter(1 + 1. * torch.rand(net_size[0]), requires_grad=True)
             else:
                 # fixed tau
-                self.taus[f'{d}'] = nn.Parameter(torch.Tensor([self.tau]), requires_grad=False)
+                self.taus[f'{d}'] = nn.Parameter(torch.Tensor([self.fixed_tau]), requires_grad=False)
 
             # todo: for 'grow' curriculum it only makes sense to have 1 read out head per module, each with their own fc parameter sets.
             self.modules[f'{d}:fc'] = nn.Linear(net_size[-1], num_classes, bias=bias)
