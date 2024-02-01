@@ -87,7 +87,6 @@ class RNN_Hierarchical(nn.Module):
         #     # print(d, k, v, type(v))
         #     l.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
         self.parameter_dict = nn.ParameterDict(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
-
         self.module_dict = nn.ModuleDict(self.modules)
 
 
@@ -127,10 +126,9 @@ class RNN_Hierarchical(nn.Module):
                 self.modules[f'{d}:w_hh'].weight.data.fill_diagonal_(0.)
 
         for t in range(data.size(0)):
-            inp = x[t, ...]
 
             for d in range(self.current_depth):
-
+                inp = net_x[d][t, ...]
                 hs = net_hs[d][0]  # todo: for now just do 1-layer modules and get the values from this single layer immediately
                 taus = self.parameter_dict[f'{d}']
                 w_hh = self.modules[f'{d}:w_hh']
@@ -149,27 +147,31 @@ class RNN_Hierarchical(nn.Module):
                     else:
                         ## with fixed tau
                         # Note: Every layer in the module gets the hier_signal from previous module. #todo: correct?
-                        if i == 0:
+                        if d == 0: # todo: this is redundant if i'm already setting hier_signal to 0 for d > 0.
                             hs = (1 - 1/taus) * hs + \
                                     self.afunc(w_hh(hs) + inp)/(taus)
                         else:
                             hs = (1 - 1/(taus)) * hs + \
                                     self.afunc(w_hh(hs) + hier_signal + inp)/(taus)
+                net_hs[d][0] = hs
+                if t == data.size(0) - 1:
+                    out = [self.modules[f'{d_i}:fc'](hs) for d_i in range(self.current_depth)]
 
-            if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
-                # hs_t.append([h.detach().to('cpu') for h in hs])
-                net_hs_t.append([[h.clone() for h in hs] for hs in net_hs])
-            # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
-            #     if index_in_head is None:
-            #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])
-            #     else:
-            #         out.append([self.fc[index_in_head](hs[-1])])
+            # if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
+            #     # hs_t.append([h.detach().to('cpu') for h in hs])
+            #     net_hs_t.append([[h.clone() for h in hs] for hs in net_hs])
+            # # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
+            # #     if index_in_head is None:
+            # #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])
+            # #     else:
+            # #         out.append([self.fc[index_in_head](hs[-1])])
 
-            if not classify_in_time:
-                if index_in_head is None:
-                    out = [self.modules[f'{d}:fc'](hs) for d in range(self.current_depth)]
-                else:
-                    out = [self.modules[f'{d}:fc'][index_in_head](hs)]
+
+        # if not classify_in_time:
+        #     if index_in_head is None:
+        #         out = [self.modules[f'{d}:fc'](hs) for d in range(self.current_depth)]
+        #     else:
+        #         out = [self.modules[f'{d}:fc'][index_in_head](hs)]
 
         if savetime:
             return net_hs_t, out
