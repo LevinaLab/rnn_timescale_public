@@ -7,10 +7,10 @@
 #SBATCH --gres=gpu:1              # optionally type and number of gpus
 #SBATCH --mem=16G                # Memory pool for all cores (see also --mem-per-cpu)
 #SBATCH --open-mode=append        # update the output file periodically (?)
-#SBATCH --output=logs/hostname_%j.out  # File to which STDOUT will be written - make sure this is not on $HOME
-#SBATCH --error=logs/datahostname_%j.err   # File to which STDERR will be written - make sure this is not on $HOME
+#SBATCH --output=/u/mhami/rnn_timescale_public/logs/%j.out  # File to which STDOUT will be written - make sure this is not on $HOME
+#SBATCH --error=/u/mhami/rnn_timescale_public/logs/%j.err   # File to which STDERR will be written - make sure this is not on $HOME
 #SBATCH --mail-type=ALL           # Type of email notification- BEGIN,END,FAIL,ALL
-#SBATCH --mail-user=YOUR.EMAIL@EMAIL.COM   # Email to which notifications will be sent
+#SBATCH --mail-user=manihamidi@gmail.com   # Email to which notifications will be sent
 
 # some bug
 source $HOME/.bashrc
@@ -21,7 +21,7 @@ echo "---------- JOB INFOS ------------"
 scontrol show job $SLURM_JOB_ID
 echo "---------------------------------"
 
-save_path="/mnt/qb/levina/rnn_timescale_public/trained_models"
+save_path="/u/mhami/rnn_timescale_public/trained_models"
 
 # insert your commands here
 # takes the same arguments as train.py but instead of number of runs you need to label the run number manually with -n
