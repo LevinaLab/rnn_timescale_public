@@ -40,6 +40,7 @@ def train(model,
                         network_number=run_number,
                         N_max=Ns[-1],
                         N_min=Ns[0],
+                        base_path=BASE_PATH,
                         init=True
                       )
 
@@ -105,7 +106,8 @@ def train(model,
                            task=task,
                            network_number=run_number,
                            N_max=Ns[-1],
-                           N_min=Ns[0]
+                           N_min=Ns[0],
+                           base_path=BASE_PATH,
                            )
 
                 if curriculum_type == 'cumulative':
@@ -134,6 +136,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Add arguments to the parser
+    # Add arguments to the parser
+    parser.add_argument('-b', '--base_path', type=str, dest='base_path',
+                        help='The base path to save results.')
     parser.add_argument('-a', '--agent_type', type=str, dest='agent_type',
                         help='agent type: (hierarchical, stack)')
     parser.add_argument('-c', '--curriculum_type', type=str, dest='curriculum_type',
@@ -169,6 +174,8 @@ if __name__ == '__main__':
     print('curriculum_type:', args.curriculum_type)
     print('task:', args.task)
     print('runs:', args.runs)
+
+    BASE_PATH = args.base_path
 
     # USER ARGUMENTS (curriculum type/task and related params)
     CURRICULUM = args.curriculum_type
