@@ -143,7 +143,12 @@ class RNN_Hierarchical(nn.Module):
 
                 for i in range(len(self.net_size)):  # net_size is normally just 1.
                     if self.train_tau:
-                        raise NotImplementedError
+                        if d == 0:  # todo: this is redundant if i'm already setting hier_signal to 0 for d > 0.
+                            hs = (1 - 1 / torch.clamp(taus, min=1.)) * hs + \
+                                 self.afunc(w_hh(hs) + inp) / (torch.clamp(taus, min=1.))
+                        else:
+                            hs = (1 - 1 / (torch.clamp(taus, min=1.))) * hs + \
+                                 self.afunc(w_hh(hs) + hier_signal + inp) / (torch.clamp(taus, min=1.))
                     else:
                         ## with fixed tau
                         # Note: Every layer in the module gets the hier_signal from previous module. #todo: correct?
