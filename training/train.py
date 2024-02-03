@@ -40,8 +40,9 @@ def train(model,
                         network_number=run_number,
                         N_max=Ns[-1],
                         N_min=Ns[0],
+                        init=True,
                         base_path=BASE_PATH,
-                        init=True
+                        affixes=AFFIXES
                       )
 
     # Train the model
@@ -108,6 +109,7 @@ def train(model,
                            N_max=Ns[-1],
                            N_min=Ns[0],
                            base_path=BASE_PATH,
+                           affixes=AFFIXES
                            )
 
                 if curriculum_type == 'cumulative':
@@ -223,7 +225,7 @@ if __name__ == '__main__':
     BIAS = True
     NUM_READOUT_HEADS_PER_MOD = 1
     NUM_READOUT_HEADS = 100
-    TRAIN_TAU = False
+    TRAIN_TAU = True
 
     # TRAINING PARAMS
     NUM_EPOCHS = 1000
@@ -233,6 +235,8 @@ if __name__ == '__main__':
     CRITERION = nn.CrossEntropyLoss()
     device = 'cuda'
 
+    tau_affix = f'train_tau={TRAIN_TAU}' if TRAIN_TAU else ''
+    AFFIXES = [tau_affix]
     for r_idx in range(1, RUNS+1):
         # init new model
         if args.agent_type == 'hierarchical':
