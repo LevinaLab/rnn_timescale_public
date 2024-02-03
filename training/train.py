@@ -235,7 +235,7 @@ if __name__ == '__main__':
     CRITERION = nn.CrossEntropyLoss()
     device = 'cuda'
 
-    tau_affix = f'train_tau={TRAIN_TAU}' if TRAIN_TAU else ''
+    tau_affix = f'train_tau={TRAIN_TAU}' if not TRAIN_TAU else ''
     AFFIXES = [tau_affix]
     for r_idx in range(1, RUNS+1):
         # init new model
