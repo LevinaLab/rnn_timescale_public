@@ -3,9 +3,12 @@
 #SBATCH --cpus-per-task=1         # Number of CPU cores per task
 #SBATCH --nodes=1                 # Ensure that all cores are on one machine
 #SBATCH --time=00-12:00            # Runtime in D-HH:MM
-#SBATCH --partition=gpu_v100    # Partition to submit to
-##SBATCH --gres=gpu:1              # optionally type and number of gpus
-#SBATCH --mem=16G                # Memory pool for all cores (see also --mem-per-cpu)
+# Node feature:
+#SBATCH --constraint="gpu"
+# Specify type and number of GPUs to use:
+#  GPU type can be v100 or rtx5000
+# SBATCH --gres=gpu:v100:1       # If using only 1 GPU of a shared node
+# SBATCH --mem=16G             # Memory is necessary if using only 1 GPU
 #SBATCH --open-mode=append        # update the output file periodically (?)
 #SBATCH --output=/u/mhami/rnn_timescale_public/logs/%j.out  # File to which STDOUT will be written - make sure this is not on $HOME
 #SBATCH --error=/u/mhami/rnn_timescale_public/logs/%j.err   # File to which STDERR will be written - make sure this is not on $HOME
