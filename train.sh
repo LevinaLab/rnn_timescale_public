@@ -7,7 +7,7 @@
 #SBATCH --constraint="gpu"
 # Specify type and number of GPUs to use:
 #  GPU type can be v100 or rtx5000
-#SBATCH --gres=gpu:v100:1       # If using only 1 GPU of a shared node
+#SBATCH --gres=gpu:rtx5000:1       # If using only 1 GPU of a shared node
 #SBATCH --ntasks-per-node=20    # If using only 1 GPU of a shared node
 #SBATCH --mem=16G             # Memory is necessary if using only 1 GPU
 #SBATCH --open-mode=append        # update the output file periodically (?)
