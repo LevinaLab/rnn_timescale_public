@@ -108,7 +108,7 @@ class RNN_Hierarchical(nn.Module):
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
             net_hs = []
             for d in range(self.current_depth):
-                hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in range(len(self.net_size))]
+                hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in self.net_size]
                 net_hs.append(hs)
 
         # net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
