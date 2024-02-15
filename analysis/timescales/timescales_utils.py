@@ -87,7 +87,8 @@ def make_binary_data(model, M, BATCH_SIZE, NET_SIZE):
         h_ns, out_class = model.forward(sequences, savetime=True)
 
     # dict of {layer_i: array(timerseries)} where timeseries is shape [timesteps, batch_size, num_neurons]
-    save_dict = {f'l{str(i_l).zfill(2)}': np.array([h_n[i_l].cpu().numpy() for h_n in h_ns]) for i_l in range(len(NET_SIZE))}
+    np.array([h_n.cpu().numpy() for h_n in h_ns])
+    # save_dict = {f'l{str(i_l).zfill(2)}': np.array([h_n.cpu().numpy() for h_n in h_ns]) for i_l in range(len(NET_SIZE))}
 
     return save_dict
 
@@ -235,7 +236,8 @@ def model_comp(ac, lags, min_lag, max_lag):
 
 
         
-def comp_acs(device, data_path, save_path, curriculum_type, task, network_number, N_max_range, T, num_neurons, num_trials, max_lag, fit_lag, burn_T, strict=False, mod_model=False, mod_afunc=torch.nn.LeakyReLU, affixes=[]):
+def comp_acs(load_function, load_func_kwargs, save_path, curriculum_type, task, network_number,
+             N_max_range, T, num_neurons, num_trials, max_lag, fit_lag, burn_T, affixes=[]):
     """ Loads the network for each N, 
     simulates it for T time-steps, computes single-neuron and population activity autocorrelations,
     estimates timescales and saves the results in a pickle file. 
@@ -294,10 +296,9 @@ def comp_acs(device, data_path, save_path, curriculum_type, task, network_number
     lags = np.arange(0, max_lag + 1)
     
     for i, N in enumerate(N_max_range):
-        
-        ac_all_single = np.zeros((num_neurons, max_lag))
-        selected_model_all = np.zeros(num_neurons)
-        tau_net_all = np.zeros(num_neurons)
+        ac_all_single = np.zeros((num_neurons * (N - 1), max_lag))
+        selected_model_all = np.zeros(num_neurons * (N - 1))
+        tau_net_all = np.zeros(num_neurons * (N - 1))
         
         # setting N_min
         if curriculum_type == 'cumulative':
@@ -312,9 +313,12 @@ def comp_acs(device, data_path, save_path, curriculum_type, task, network_number
     
         # loading the model
         print('N = ', N)
-        rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc, affixes = affixes)
-        trained_taus = rnn.taus[0].detach().numpy() # trained taus
-            
+        load_func_kwargs['N'] = N
+        # rnn = load(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc, affixes = affixes)
+        rnn = load_function(**load_func_kwargs)
+        # trained_taus = rnn.taus[0].detach().numpy() # trained taus
+        trained_taus = [rnn.taus[f'{k}'].detach().cpu().numpy() for k in range(i + 1)]
+
         # simulating the model activity using random binary inputs
         save_dict = make_binary_data(rnn, T, num_trials, [num_neurons])
         data_all = save_dict['l00'][burn_T:,:,:] # time * trials * neurons   

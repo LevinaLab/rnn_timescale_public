@@ -108,10 +108,10 @@ class RNN_Hierarchical(nn.Module):
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
             net_hs = []
             for d in range(self.current_depth):
-                hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in self.net_size]
+                hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in range(len(self.net_size))]
                 net_hs.append(hs)
 
-        net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
+        # net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
         net_x = []
         for d in range(self.current_depth):
             # todo: what does this stack().mean() do? Why would ther be any averaging anyways?
@@ -125,6 +125,7 @@ class RNN_Hierarchical(nn.Module):
             for i in range(len(self.net_size)):
                 self.modules[f'{d}:w_hh'].weight.data.fill_diagonal_(0.)
 
+        net_hs_t = []
         for t in range(data.size(0)):
 
             for d in range(self.current_depth):
@@ -162,14 +163,14 @@ class RNN_Hierarchical(nn.Module):
                 if t == data.size(0) - 1:
                     out = [self.modules[f'{d_i}:fc'](hs) for d_i in range(self.current_depth)]
 
-            # if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
-            #     # hs_t.append([h.detach().to('cpu') for h in hs])
-            #     net_hs_t.append([[h.clone() for h in hs] for hs in net_hs])
-            # # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
-            # #     if index_in_head is None:
-            # #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])
-            # #     else:
-            # #         out.append([self.fc[index_in_head](hs[-1])])
+            if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
+                # hs_t.append([h.detach().to('cpu') for h in hs])
+                net_hs_t.append([hs[0].clone() for hs in net_hs])
+            # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
+            #     if index_in_head is None:
+            #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])
+            #     else:
+            #         out.append([self.fc[index_in_head](hs[-1])])
 
 
         # if not classify_in_time:
