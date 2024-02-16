@@ -51,7 +51,7 @@ class RNN_Hierarchical(nn.Module):
         self.fixed_tau = tau
         self.train_tau = train_tau
         self.max_depth = max_depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
-        self.current_depth = 1  #  todo:  nn.Parameter(1, requires_grad=False)  so that it is saved in the model.  # The network starts with a single module and therefore depth=1.
+        self.current_depth = nn.Parameter(torch.tensor([1]), requires_grad=False)  #  The network starts with a single module and therefore depth=1. We register it as a parameter so that it is saved in the model.  #
 
         self.afunc = nn.LeakyReLU()
         self.taus = defaultdict()
@@ -81,12 +81,8 @@ class RNN_Hierarchical(nn.Module):
             self.modules[f'{d}:fc'] = nn.Linear(net_size[-1], num_classes, bias=bias)
 
 
-
-        # l = []
-        # for k, v in self.module_dict.items():
-        #     # print(d, k, v, type(v))
-        #     l.extend(v)  # todo: not sure if/why its necessary to have them all declared in a nn.ModuleList()
-        self.parameter_dict = nn.ParameterDict(self.taus)  # todo: what is this good for? it's not used anywhere. Is it so that they are registered?
+        self.parameter_dict = nn.ParameterDict(self.taus)  # so that parameters are registered by torch.
+        self.non_trained_params = nn.ParameterList([self.current_depth])
         self.module_dict = nn.ModuleDict(self.modules)
 
 
@@ -138,7 +134,7 @@ class RNN_Hierarchical(nn.Module):
                     # if we are in the second module or higher, we have input from the previous (j-1) module
                     w_ff_in = self.modules[(f'{d}:w_ff_in')]
                     # todo: '-1' implies only the last layer of each module that's fed forward to the next module. Is this correct?
-                    hier_signal = w_ff_in(net_hs[d - 1][-1])  # todo: no non-linearity for feed-forward connections?
+                    hier_signal = self.afunc(w_ff_in(net_hs[d - 1][-1]))
                 else:
                     hier_signal = 0
 

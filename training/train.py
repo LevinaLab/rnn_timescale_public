@@ -123,7 +123,7 @@ def train(model,
 
                 if curriculum_type == 'grow':
                     Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
-                    model.current_depth += 1
+                    model.current_depth += 1  # change to model.current_depth.data += 1. Register as parameter so torch dumps it.
 
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
