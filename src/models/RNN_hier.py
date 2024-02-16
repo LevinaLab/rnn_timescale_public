@@ -51,7 +51,7 @@ class RNN_Hierarchical(nn.Module):
         self.fixed_tau = tau
         self.train_tau = train_tau
         self.max_depth = max_depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
-        self.current_depth = 1  # The network starts with a single module and therefore depth=1.
+        self.current_depth = 1  #  todo:  nn.Parameter(1, requires_grad=False)  so that it is saved in the model.  # The network starts with a single module and therefore depth=1.
 
         self.afunc = nn.LeakyReLU()
         self.taus = defaultdict()
@@ -165,7 +165,7 @@ class RNN_Hierarchical(nn.Module):
 
             if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
-                net_hs_t.append([hs[0].clone() for hs in net_hs])
+                net_hs_t.append([hs_[0].clone() for hs_ in net_hs])
             # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
             #     if index_in_head is None:
             #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])

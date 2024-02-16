@@ -323,6 +323,7 @@ def comp_acs(load_function, load_func_kwargs, save_path, curriculum_type, task, 
         load_func_kwargs['N'] = N
         # rnn = load(curriculum_type = curriculum_type, task = task, network_number = network_number, N_max = N, N_min = N_min, device=device, base_path = data_path, strict = strict, mod_model = mod_model, mod_afunc = mod_afunc, affixes = affixes)
         rnn = load_function(**load_func_kwargs)
+        rnn.current_depth = N - 1  # todo: in future this parameter will be loaded when we hydrate the object from torch dumps.
         # trained_taus = rnn.taus[0].detach().numpy() # trained taus
         trained_taus = [rnn.taus[f'{k}'].detach().cpu().numpy() for k in range(i + 1)]
 
@@ -339,7 +340,7 @@ def comp_acs(load_function, load_func_kwargs, save_path, curriculum_type, task, 
         
         # compute single-neuron AC and estimate network-mediated timescales
         print('Computing single-neuron AC')
-        for j in tqdm(range(num_neurons)):
+        for j in tqdm(range(num_neurons * (N - 1))):
             ac_sum = 0
             data = np.transpose(data_all[:,:, j])
             ac = comp_ac_fft(data)
