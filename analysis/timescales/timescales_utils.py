@@ -80,6 +80,7 @@ def make_binary_data(model, M, BATCH_SIZE, NET_SIZE):
     '''
     
     # preparing training data and labels
+
     sequences = make_batch_Nbit_parity(M, BATCH_SIZE)
     sequences = sequences.permute(1, 0, 2).to(device)
 
@@ -87,10 +88,16 @@ def make_binary_data(model, M, BATCH_SIZE, NET_SIZE):
         h_ns, out_class = model.forward(sequences, savetime=True)
 
     # dict of {layer_i: array(timerseries)} where timeseries is shape [timesteps, batch_size, num_neurons]
-    np.array([h_n.cpu().numpy() for h_n in h_ns])
-    # save_dict = {f'l{str(i_l).zfill(2)}': np.array([h_n.cpu().numpy() for h_n in h_ns]) for i_l in range(len(NET_SIZE))}
-
-    return save_dict
+    # np.array([h_n.cpu().numpy() for h_n in h_ns])
+    data = []
+    save_dict = {}  # for when/if sina get it wrong
+    for h_n_t in h_ns: # h_ns[ h_n_t=0, h_n_t=1, ...]
+        data.append([])
+        for d, h_n_d in enumerate(h_n_t):  # h_n_t[ h_n_depth=0, h_n_depth=1, ...]
+            data[-1].append(h_n_d.cpu().numpy())
+            save_dict[str(d).zfill(2)] = h_n_d
+    data = np.array(data).reshape(M, BATCH_SIZE, -1)
+    return data
 
 def comp_ac_fft(data):
     """Compute auto-correlations from binned data (without normalization).
@@ -320,8 +327,8 @@ def comp_acs(load_function, load_func_kwargs, save_path, curriculum_type, task, 
         trained_taus = [rnn.taus[f'{k}'].detach().cpu().numpy() for k in range(i + 1)]
 
         # simulating the model activity using random binary inputs
-        save_dict = make_binary_data(rnn, T, num_trials, [num_neurons])
-        data_all = save_dict['l00'][burn_T:,:,:] # time * trials * neurons   
+        returned_data = make_binary_data(rnn, T, num_trials, [num_neurons])
+        data_all = returned_data[burn_T:,:,:]  # time * trials * neurons
         
        
         # compute population AC
