@@ -124,13 +124,12 @@ def train(model,
                 if curriculum_type == 'grow':
 
                     Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
-                    d = model.current_depth
-                    model.current_depth.data = d + 1  # change to model.current_depth.data += 1. Register as parameter so torch dumps it.
-                    d_int = d.item()
-                    model.modules[f'{d_int + 1}:input_layers'].weight.d_intata = model.modules[f'{d_int}:input_layers'].weight.data
-                    model.modules[f'{d_int + 1}:input_layers'].bias.data = model.modules[f'{d_int}:input_layers'].bias.data
-                    model.modules[f'{d_int + 1}:w_hh'].weight.data = model.modules[f'{d_int}:w_hh'].weight.data
-                    model.modules[f'{d_int + 1}:w_hh'].bias.data = model.modules[f'{d_int}:w_hh'].bias.data
+                    model.current_depth.data += 1  # change to model.current_depth.data += 1. Register as parameter so torch dumps it.
+                    d_int = model.current_depth.item()
+                    model.modules[f'{d_int}:input_layers'].weight.d_intata = model.modules[f'{d_int - 1}:input_layers'].weight.data
+                    model.modules[f'{d_int}:input_layers'].bias.data = model.modules[f'{d_int - 1}:input_layers'].bias.data
+                    model.modules[f'{d_int}:w_hh'].weight.data = model.modules[f'{d_int - 1}:w_hh'].weight.data
+                    model.modules[f'{d_int}:w_hh'].bias.data = model.modules[f'{d_int - 1}:w_hh'].bias.data
 
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
