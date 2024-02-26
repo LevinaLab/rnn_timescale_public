@@ -46,7 +46,7 @@ def train(model,
     for epoch in tqdm(range(num_epochs)):
         losses_step = []
         for i in range(TRAINING_STEPS):
-            OPTIMIZER.zero_grad()
+            zero_grad_helper(OPTIMIZERS)
             sequences, labels = task_function(Ns, BATCH_SIZE)
             sequences = sequences.permute(1, 0, 2).to(device)
             labels = [l.to(device) for l in labels]
@@ -63,7 +63,12 @@ def train(model,
             losses_step.append(loss.item())
             # gradient clipping
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0, norm_type=2)
-            OPTIMIZER.step()
+            # OPTIMIZER.step()
+            # Step the optimizers in every training step:
+            stepper(stepper_object=OPTIMIZERS, max_depth=model.current_depth.item(), num_steps=1)
+
+        # Step the schedulers in every epoch:
+        stepper(stepper_object=SCHEDULERS, max_depth=model.current_depth.item(), num_steps=1)
 
         losses.append(np.mean(losses_step))
 
@@ -122,10 +127,30 @@ def train(model,
                     model.modules[f'{d_int}:w_hh'].weight.data = model.modules[f'{d_int - 1}:w_hh'].weight.data
                     model.modules[f'{d_int}:w_hh'].bias.data = model.modules[f'{d_int - 1}:w_hh'].bias.data
 
+                    stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=FREEZING_STEPS)
+
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
     return stats
 
+
+def zero_grad_helper(optimizers):
+    for name, opt in optimizers.items():
+        opt.zero_grad()
+
+def stepper(stepper_object, max_depth, num_steps):
+    for d in range(max_depth):
+        for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+            try:
+                for _ in range(num_steps):
+                    stepper_object[f'{d}:{m}'].step()
+            # so I allow for w_ff_in to not exist for d == 0 but still raise if layer is not found for d > 0.
+            except KeyError:
+                if 'w_ff_in' in m and d == 0:
+                    continue
+                else:
+                    print(f'Error: {d}:{m} not found in stepper_object.', flush=True)
+                    raise
 
 ###############################################################
 
@@ -216,13 +241,15 @@ if __name__ == '__main__':
     ###############################################################
 
     # MODEL PARAMS
+    MAX_DEPTH = 55
     INPUT_SIZE = 1
-    NET_SIZE = [10]
+    NET_SIZE = [40]
     NUM_CLASSES = 2
     BIAS = True
-    NUM_READOUT_HEADS_PER_MOD = 1
-    NUM_READOUT_HEADS = 100
+    NUM_READOUT_HEADS_PER_MOD = 1  # for hierarchical/growing model
     TRAIN_TAU = True
+
+    NUM_READOUT_HEADS = 100  # for basic stack model
 
     # TRAINING PARAMS
     NUM_EPOCHS = 1000
@@ -237,7 +264,7 @@ if __name__ == '__main__':
     for r_idx in range(1, RUNS + 1):
         # init new model
         if args.agent_type == 'hierarchical':
-            rnn = RNN_Hierarchical(max_depth=55,
+            rnn = RNN_Hierarchical(max_depth=MAX_DEPTH,
                                    input_size=INPUT_SIZE,
                                    net_size=NET_SIZE,
                                    num_classes=NUM_CLASSES,
@@ -258,9 +285,23 @@ if __name__ == '__main__':
         rnn.to(device)
 
         # SGD Optimizer
-        learning_rate = 0.05
-        momentum = 0.1
-        OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
+        LEARNING_RATE = 0.05
+        MOMENTUM = 0.1
+        FREEZING_STEPS = 25  # how many scheduling steps are taken upon successful completion of curriculum step.
+        GAMMA = 0.95  # learning rate decay factor upon every scheduling step.
+
+        if args.agent_type == 'stack':
+            OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=LEARNING_RATE, momentum=MOMENTUM, nesterov=True)
+        elif args.agent_type == 'hierarchical':
+            OPTIMIZERS = {}
+            SCHEDULERS = {}
+            for d in range(MAX_DEPTH):
+                opt_params = {}
+                for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+                    if f'{d}:{m}' in rnn.modules.keys():  # to control for the fact that w_ff_in only exists for d > 0
+                        OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(rnn.modules[f'{d}:{m}'].parameters(), lr=LEARNING_RATE,
+                                                                 momentum=MOMENTUM, nesterov=True)
+                        SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=GAMMA)
 
         stats = train(rnn,
                       curriculum_type=CURRICULUM,
