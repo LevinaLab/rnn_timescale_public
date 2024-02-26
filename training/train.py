@@ -125,8 +125,9 @@ def train(model,
 
                     Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
                     model.current_depth.data += 1  # change to model.current_depth.data += 1. Register as parameter so torch dumps it.
+
                     d_int = model.current_depth.item()
-                    model.modules[f'{d_int}:input_layers'].weight.d_intata = model.modules[f'{d_int - 1}:input_layers'].weight.data
+                    model.modules[f'{d_int}:input_layers'].weight.data = model.modules[f'{d_int - 1}:input_layers'].weight.data
                     model.modules[f'{d_int}:input_layers'].bias.data = model.modules[f'{d_int - 1}:input_layers'].bias.data
                     model.modules[f'{d_int}:w_hh'].weight.data = model.modules[f'{d_int - 1}:w_hh'].weight.data
                     model.modules[f'{d_int}:w_hh'].bias.data = model.modules[f'{d_int - 1}:w_hh'].bias.data
