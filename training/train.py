@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 
 # Get the absolute path of the parent directory of 'src'
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -89,7 +90,11 @@ def train(model,
         print('({N}, accuracy):\n' + ''.join([f'({Ns[i]}, {accuracy[i]:.4f})\n' for i in range(len(Ns))]), flush=True)
 
         stats = {'loss': losses,
-                 'accuracy': accuracies}
+                 'accuracy': accuracies,
+                 'time': time.time(),
+                 'epoch': epoch,
+                 'N': Ns,}
+
         np.save(f'{subdir}/stats.npy', stats)
 
         # curriculum stuff + save
