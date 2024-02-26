@@ -1,18 +1,14 @@
+from datetime import datetime
+
 import torch
 import os
 
 def save_model(
         model,
-        curriculum_type: str,
-        n_heads: int,
-        n_forget: int,
-        task: str,
-        network_number: int,
+        rnn_subdir,
         N_max: int,
         N_min: int = 2,
-        base_path="../trained_models",
-        affixes=[],
-        init=False
+        init=False,
 ):
 
     """Save the RNNs for the given type and network_name.
@@ -21,19 +17,41 @@ def save_model(
 
     Args:
         model: torch RNN_Stack model
-        curriculum_type: 'cumulative', f'sliding_{n_heads}_{n_forget}', 'single'
-        n_heads: (for sliding) number of training heads
-        n_forget: (for sliding) number of heads forgotten per curricula
-        task: 'parity' or 'dms'
-        network_number: 1, 2, 3, ...
         N_max: N that the network should be able to solve
         N_min: minimum N, potentially depending on curriculum_type
-        affixes: a list of strings to append to the directory name
         init: If True, saves with a different file name to show this is before training.
     """
+
+    if init:
+        rnn_name = f'rnn_init'
+    else:
+        rnn_name = f'rnn_N{N_min:d}_N{N_max:d}'
+
+    filename = os.path.join(
+        rnn_subdir,
+        rnn_name
+    )
+    torch.save({'state_dict': model.state_dict()}, filename)
+
+    return filename
+
+
+def generate_subdir(affixes, curriculum_type, n_heads, n_forget, task,
+                    network_number, base_path, timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S"):
+    """Creates a directory for saving results to.
+
+    If the directory already exists, it will print a warning and may overwrite files.
+
+    Parameters
+    ----------
+    timestamp_subdir_fmt: "%Y-%b-%d-%H_%M_%S" by default, can be None to omit in directory name.
+    """
+
     affix_str = '_'
     if len(affixes) > 0:
         affix_str += '_'.join(affixes) + '_'
+    if timestamp_subdir_fmt:
+        affix_str += datetime.now().strftime(timestamp_subdir_fmt) + '_'
 
     if curriculum_type == 'sliding':
         rnn_subdir = os.path.join(
@@ -45,19 +63,10 @@ def save_model(
             base_path,
             f'{curriculum_type}_{task}{affix_str}network_{network_number}'
         )
-    if init:
-        rnn_name = f'rnn_init'
-    else:
-        rnn_name = f'rnn_N{N_min:d}_N{N_max:d}'
-
 
     if not os.path.exists(rnn_subdir):
         os.makedirs(rnn_subdir)
+    else:
+        print(f"Warning: {rnn_subdir} already exists. Files may be overwritten.")
 
-    filename = os.path.join(
-        rnn_subdir,
-        rnn_name
-    )
-    torch.save({'state_dict': model.state_dict()}, filename)
-
-    return rnn_subdir
+    return os.path.abspath(rnn_subdir)

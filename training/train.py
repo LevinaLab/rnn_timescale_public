@@ -17,7 +17,7 @@ from tqdm import tqdm
 from src.models.RNN_hier import RNN_Hierarchical
 from src.models.RNN_Stack import RNN_Stack
 import src.tasks as tasks
-from src.utils import save_model
+from src.utils import save_model, generate_subdir
 
 
 def train(model,
@@ -26,24 +26,20 @@ def train(model,
           num_epochs,
           Ns,  # List of parities that are being trained/tested. Grows with curriculum.
           run_number):
-
     # stats
     losses = []
     accuracies = []
 
+    subdir = generate_subdir(curriculum_type=curriculum_type,
+                             n_heads=len(Ns),
+                             n_forget=NUM_FORGET,
+                             task=task,
+                             network_number=run_number,
+                             base_path=BASE_PATH,
+                             affixes=AFFIXES,
+                             timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
     # save init
-    subdir = save_model(model,
-                        curriculum_type=curriculum_type,
-                        n_heads=len(Ns),
-                        n_forget=NUM_FORGET,
-                        task=task,
-                        network_number=run_number,
-                        N_max=Ns[-1],
-                        N_min=Ns[0],
-                        init=True,
-                        base_path=BASE_PATH,
-                        affixes=AFFIXES
-                      )
+    save_model(model, rnn_subdir=subdir, N_max=Ns[-1], N_min=Ns[0], init=True)
 
     # Train the model
     for epoch in tqdm(range(num_epochs)):
@@ -100,17 +96,7 @@ def train(model,
         if accuracy.mean() > 98.:  # so it doesn't forget the older tasks
             if accuracy[-1] > 98.:
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
-                save_model(model,
-                           curriculum_type=curriculum_type,
-                           n_heads=len(Ns),
-                           n_forget=NUM_FORGET,
-                           task=task,
-                           network_number=run_number,
-                           N_max=Ns[-1],
-                           N_min=Ns[0],
-                           base_path=BASE_PATH,
-                           affixes=AFFIXES
-                           )
+                save_model(model, rnn_subdir=subdir, N_max=Ns[-1], N_min=Ns[0])
 
                 if curriculum_type == 'cumulative':
                     Ns = Ns + [Ns[-1] + 1 + i for i in range(NUM_ADD)]
@@ -122,7 +108,6 @@ def train(model,
                     Ns = [Ns[0] + 1]
 
                 if curriculum_type == 'grow':
-
                     Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
                     model.current_depth.data += 1  # change to model.current_depth.data += 1. Register as parameter so torch dumps it.
 
@@ -244,7 +229,7 @@ if __name__ == '__main__':
 
     tau_affix = f'train_tau={TRAIN_TAU}' if not TRAIN_TAU else ''
     AFFIXES = [tau_affix]
-    for r_idx in range(1, RUNS+1):
+    for r_idx in range(1, RUNS + 1):
         # init new model
         if args.agent_type == 'hierarchical':
             rnn = RNN_Hierarchical(max_depth=55,
@@ -266,7 +251,6 @@ if __name__ == '__main__':
                             train_tau=TRAIN_TAU
                             )
         rnn.to(device)
-
 
         # SGD Optimizer
         learning_rate = 0.05
