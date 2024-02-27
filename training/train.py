@@ -68,7 +68,7 @@ def train(model,
             stepper(stepper_object=OPTIMIZERS, max_depth=model.current_depth.item(), num_steps=1)
 
         # Step the schedulers in every epoch:
-        stepper(stepper_object=SCHEDULERS, max_depth=model.current_depth.item(), num_steps=1)
+        # stepper(stepper_object=SCHEDULERS, max_depth=model.current_depth.item(), num_steps=1)
 
         losses.append(np.mean(losses_step))
 
@@ -122,10 +122,14 @@ def train(model,
                     model.current_depth.data += 1  # change to model.current_depth.data += 1. Register as parameter so torch dumps it.
 
                     d_int = model.current_depth.item()
-                    model.modules[f'{d_int}:input_layers'].weight.data = model.modules[f'{d_int - 1}:input_layers'].weight.data
-                    model.modules[f'{d_int}:input_layers'].bias.data = model.modules[f'{d_int - 1}:input_layers'].bias.data
-                    model.modules[f'{d_int}:w_hh'].weight.data = model.modules[f'{d_int - 1}:w_hh'].weight.data
-                    model.modules[f'{d_int}:w_hh'].bias.data = model.modules[f'{d_int - 1}:w_hh'].bias.data
+                    for layer_name in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+                        new_layer = model.modules[f'{d_int}:{layer_name}']
+                        last_layer = model.modules[f'{d_int - 1}:{layer_name}']
+                        new_layer.weight.data = last_layer.weight.data * (1 + WEIGHT_NOISE * torch.randn_like(last_layer.weight.data))
+                        new_layer.bias.data = last_layer.bias.data * (1 + BIAS_NOISE * torch.randn_like(last_layer.bias.data))
+                    new_taus = model.taus[f'{d_int}']
+                    last_taus = model.taus[f'{d_int - 1}']
+                    new_taus.data = last_taus.data * (1 + TAUS_NOISE * torch.randn_like(last_taus.data))
 
                     stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=FREEZING_STEPS)
 
@@ -137,6 +141,7 @@ def train(model,
 def zero_grad_helper(optimizers):
     for name, opt in optimizers.items():
         opt.zero_grad()
+
 
 def stepper(stepper_object, max_depth, num_steps):
     for d in range(max_depth):
@@ -243,12 +248,15 @@ if __name__ == '__main__':
     # MODEL PARAMS
     MAX_DEPTH = 55
     INPUT_SIZE = 1
-    NET_SIZE = [40]
+    NET_SIZE = [20]
     NUM_CLASSES = 2
     BIAS = True
     NUM_READOUT_HEADS_PER_MOD = 1  # for hierarchical/growing model
     TRAIN_TAU = True
 
+    WEIGHT_NOISE = 0.03
+    BIAS_NOISE = 0.03
+    TAUS_NOISE = 0.02
     NUM_READOUT_HEADS = 100  # for basic stack model
 
     # TRAINING PARAMS
