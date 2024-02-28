@@ -34,9 +34,21 @@ class RNN_Hierarchical(nn.Module):
                  num_classes=2,
                  bias=True,
                  num_readout_heads_per_mod=1,
-                 tau=1.,
-                 train_tau=False,
+                 fixed_tau_val=1.,
+                 train_tau=True,
                  ):
+        """
+
+        Args:
+            max_depth: [int] how many modules there are in the hierarchy
+            net_size:  [list] of int, number of neurons per layer (size larger than 1 it is for a multi layer network)
+            input_size: [int] size of input (it has been always 1)
+            num_classes: [int] number of classes for classification at the end of each "head"
+            bias: [bool] if we include bias terms
+            num_readout_heads_per_mod: [int] number of readout heads per module
+            fixed_tau_val: [float] for when train_tau = False
+            train_tau: [bool] if we let backprop train the taus or not
+        """
         super(RNN_Hierarchical, self).__init__()
 
         self.input_size = input_size
@@ -44,7 +56,7 @@ class RNN_Hierarchical(nn.Module):
         self.num_classes = num_classes
         self.bias = bias
         self.num_readout_heads_per_mod = num_readout_heads_per_mod
-        self.fixed_tau = tau
+        self.fixed_tau = fixed_tau_val
         self.train_tau = train_tau
         self.max_depth = max_depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
         self.current_depth = nn.Parameter(torch.tensor([1]), requires_grad=False)  #  The network starts with a single module and therefore depth=1. We register it as a parameter so that it is saved in the model.  #
@@ -194,7 +206,7 @@ def init_model(
                            num_classes=NUM_CLASSES,
                            bias=BIAS,
                            num_readout_heads_per_mod=NUM_READOUT_HEADS_PER_MOD,
-                           tau=1.,
+                           fixed_tau_val=1.,
                            train_tau=TRAIN_TAU
                            ).to(DEVICE)
 
