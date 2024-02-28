@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import torch
@@ -34,6 +35,15 @@ def save_model(
     torch.save({'state_dict': model.state_dict()}, filename)
 
     return filename
+
+def save_configs(rnn_subdir, configs):
+    """Saves the configurations used to a a json file in the rnn_subdir.
+
+    """
+    # TODO
+    filename = os.path.join(rnn_subdir, 'configs.json')
+    with open(filename, 'w') as f:
+        json.dump(configs, f, indent=4)
 
 
 def generate_subdir(affixes, curriculum_type, n_heads, n_forget, task,
