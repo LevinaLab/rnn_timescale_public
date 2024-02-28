@@ -14,7 +14,7 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 space = {
     'prod': {
         'SEED': [0],
-        'NUM_EPOCHS': [1000, 2000],
+        'NUM_EPOCHS': [1000],
         'BATCH_SIZE': [256],
         'TRAINING_STEPS': [600],
         'TEST_STEPS': [50],
@@ -24,7 +24,7 @@ space = {
         'MOMENTUM': [0.1],
         'FREEZING_STEPS': [25],
         "GAMMA": [0.95],
-        'WEIGHT_NOISE': [0.03],
+        'WEIGHT_NOISE': [0.025, 0.05, 0.1, 0.2],
         'BIAS_NOISE': [0.03],
         'TAUS_NOISE': [0.02],
         "MAX_DEPTH": [50],
