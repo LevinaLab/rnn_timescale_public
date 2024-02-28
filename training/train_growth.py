@@ -12,11 +12,9 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-import argparse
 from tqdm import tqdm
 
 from src.models.RNN_hier import RNN_Hierarchical
-from src.models.RNN_Stack import RNN_Stack
 import src.tasks as tasks
 from src.utils import save_model, generate_subdir, save_configs
 import config_parser
@@ -32,23 +30,24 @@ def train():
     OPTIMIZERS: dict of torch.optim.SGD
     SCHEDULERS: dict of torch.optim.lr_scheduler.ExponentialLR
     TASK_FUNCTION: function that returns input data and their labels.
-    NS: list of N's that the model should solve.
-
     todo: these should all be passed as arguments to the function, but I also don't want there to be a danger of
           mismatch between attributes of the model that is passed and what the config says.
     """
+    if CONFIGS['CURRICULUM'] != 'grow':
+        raise Exception(f"train_growth.py only supports the 'grow' curriculum, you provided: {CONFIGS['CURRICULUM']}")
+
     losses = []
     accuracies = []
-
+    Ns = [2]
 
     # Train the model
-    for epoch in tqdm(range(num_epochs)):
+    for epoch in tqdm(range(CONFIGS['NUM_EPOCHS'])):
         losses_step = []
-        for i in range(TRAINING_STEPS):
+        for i in range(CONFIGS['TRAINING_STEPS']):
             zero_grad_helper(OPTIMIZERS)
-            sequences, labels = TASK_FUNCTION(Ns, BATCH_SIZE)
-            sequences = sequences.permute(1, 0, 2).to(device)
-            labels = [l.to(device) for l in labels]
+            sequences, labels = TASK_FUNCTION(Ns, CONFIGS['BATCH_SIZE'])
+            sequences = sequences.permute(1, 0, 2).to(CONFIGS['DEVICE'])
+            labels = [l.to(CONFIGS['DEVICE']) for l in labels]
 
             # Forward pass
             out, out_class = MODEL(sequences)
@@ -107,23 +106,20 @@ def train():
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
                 save_model(MODEL, rnn_subdir=subdir, N_max=Ns[-1], N_min=Ns[0])
 
-                if CONFIGS['CURRICULUM'] == 'grow':
-                    Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
-                    MODEL.current_depth.data += 1  # change to MODEL.current_depth.data += 1. Register as parameter so torch dumps it.
+                Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
+                MODEL.current_depth.data += 1  # change to MODEL.current_depth.data += 1. Register as parameter so torch dumps it.
 
-                    d_int = MODEL.current_depth.item()
-                    for layer_name in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
-                        new_layer = MODEL.modules[f'{d_int}:{layer_name}']
-                        last_layer = MODEL.modules[f'{d_int - 1}:{layer_name}']
-                        new_layer.weight.data = last_layer.weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(last_layer.weight.data))
-                        new_layer.bias.data = last_layer.bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(last_layer.bias.data))
-                    new_taus = MODEL.taus[f'{d_int}']
-                    last_taus = MODEL.taus[f'{d_int - 1}']
-                    new_taus.data = last_taus.data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(last_taus.data))
+                d_int = MODEL.current_depth.item()
+                for layer_name in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+                    new_layer = MODEL.modules[f'{d_int}:{layer_name}']
+                    last_layer = MODEL.modules[f'{d_int - 1}:{layer_name}']
+                    new_layer.weight.data = last_layer.weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(last_layer.weight.data))
+                    new_layer.bias.data = last_layer.bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(last_layer.bias.data))
+                new_taus = MODEL.taus[f'{d_int}']
+                last_taus = MODEL.taus[f'{d_int - 1}']
+                new_taus.data = last_taus.data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(last_taus.data))
 
-                    stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
-                else:
-                    raise Exception(f"train_growth.py only supports the 'grow' curriculum, you provided: {CONFIGS['CURRICULUM']}")
+                stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
     return stats
@@ -156,9 +152,8 @@ if __name__ == '__main__':
     CONFIGS = config_parser.parse_args()
 
     # Access the values of the arguments
-    print('CURRICULUM:', CONFIGS["CURRICULUM"])
-    print('TASK:', CONFIGS["TASK"])
-    print('SEED:', CONFIGS["SEED"])
+    for k in ['CURRICULUM', 'NET_SIZE', 'TASK', 'SEED', 'DEVICE']:
+        print(f"{k}: {CONFIGS[k]}")
 
     SEED = CONFIGS["SEED"]
     torch.manual_seed(SEED)
@@ -173,11 +168,9 @@ if __name__ == '__main__':
         print('Unrecognized task:', CONFIGS["TASK"])
 
 
-    if CONFIGS['CURRICULUM'] == 'grow':
-        Ns_init = [2]
-        INIT_HEADS = 1
-    else:
+    if CONFIGS['CURRICULUM'] != 'grow':
         raise Exception(f"Unrecognized curriculum type: {CONFIGS['CURRICULUM']}")
+
     ###############################################################
 
 
@@ -186,9 +179,10 @@ if __name__ == '__main__':
     tau_affix = f"train_tau={CONFIGS['TRAIN_TAU']}" if not CONFIGS['TRAIN_TAU'] else ""
     AFFIXES = [tau_affix]
 
+    NET_SIZE = [CONFIGS['NET_SIZE']]  # todo: fix
     MODEL = RNN_Hierarchical(max_depth=CONFIGS['MAX_DEPTH'],
                            input_size=CONFIGS['INPUT_SIZE'],
-                           net_size=CONFIGS['NET_SIZE'],
+                           net_size=NET_SIZE,  # todo: fix
                            num_classes=CONFIGS['NUM_CLASSES'],
                            bias=CONFIGS['BIAS'],
                            num_readout_heads_per_mod=CONFIGS['NUM_READOUT_HEADS_PER_MOD'],
@@ -208,19 +202,16 @@ if __name__ == '__main__':
                                                          momentum=CONFIGS['MOMENTUM'], nesterov=True)
                 SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
 
-    NS = list(range(2, CONFIGS['MAX_DEPTH']))
-
     BASE_PATH = os.path.join(parent_dir, 'trained_models')
     subdir = generate_subdir(curriculum_type=CONFIGS['CURRICULUM'],
-                             n_heads=len(NS),
-                             n_forget=CONFIGS['NUM_FORGET'],
-                             task=CONFIGS['task'],
-                             network_number=0,
-                             base_path=BASE_PATH,
-                             affixes=AFFIXES,
-                             timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
+                                          n_heads=1,
+                                          task=CONFIGS['TASK'],
+                                          network_number=0,
+                                          base_path=BASE_PATH,
+                                          affixes=AFFIXES,
+                                          timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
     save_configs(subdir, CONFIGS)
     # save init
-    save_model(MODEL, rnn_subdir=subdir, N_max=NS[-1], N_min=NS[0], init=True)
+    save_model(MODEL, rnn_subdir=subdir, N_max=CONFIGS['MAX_DEPTH'], N_min=2, init=True)
 
     stats = train()
