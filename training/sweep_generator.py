@@ -1,63 +1,71 @@
 """
-This file is from: https://github.com/CSCfi/slurm-hyper-search/blob/master/generate_params.py
+This file is modified from: https://github.com/CSCfi/slurm-hyper-search/blob/master/generate_params.py
 
 Usage:
 
-python generate_params.py --production all  # generates full grid of prod hyperparams under params/prod_sweep
-python generate_params.py all               # generates full grid of test hyperparams under params/test_sweep
+python sweep_generator.py --prod
 """
 import argparse
 import os
-import numpy as np
-from sklearn.model_selection import ParameterSampler, ParameterGrid
+from itertools import product
 
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-OUT_DIR = 'params'
 space = {
     'prod': {
-        'env_N': [6],
-        'env_K': [0],
-        'learning_rate': [1e-3],
-        'lr_rho': [1e-3],
-        'beta_1': [np.inf],
-        'beta_3': [2, 4, 8, 16, 32, 64, 1028],
-        'beta_beh': [0.5, 1,  2, 4, 8, 16, 32, 64, 1028],
-        'n_envs_per_param': [1000],
-        'n_seeds_per_param': [1],
-        'seed_per_env': [True],
-        "reward_noise_std": [0.05],
-        'pre_built_env_folder': [''],
-        'pre_built_env': [False],
-        'fitness_type': ['k0_exponential'],
-        "mask": [None],
-        "n_actions_masked": [0],
-        "mask_length": [0],
-        "replay_memory": [1],
-        "replay_batch_size": [1],
+        'SEED': [0],
+        'NUM_EPOCHS': [1000, 2000],
+        'BATCH_SIZE': [256],
+        'TRAINING_STEPS': [600],
+        'TEST_STEPS': [50],
+        'DEVICE': ['cuda'],
+        'CURRICULUM': ['grow'],
+        'LEARNING_RATE': [0.05],
+        'MOMENTUM': [0.1],
+        'FREEZING_STEPS': [25],
+        "GAMMA": [0.95],
+        'WEIGHT_NOISE': [0.03],
+        'BIAS_NOISE': [0.03],
+        'TAUS_NOISE': [0.02],
+        "MAX_DEPTH": [50],
+        "INPUT_SIZE": [1],
+        "NET_SIZE": [10],
+        "NUM_CLASSES": [2],
+        "BIAS": [True],
+        "NUM_READOUT_HEADS_PER_MOD": [1],
+        "TRAIN_TAU": [True],
+        "TASK": ['parity'],
     },
 }
 
 
-def main(args):
+def parameter_grid(param_dict):
+    """Generate all combinations of parameters from a dictionary or a list of dictionaries."""
+    # If param_dict is a dictionary, wrap it in a list
+    if isinstance(param_dict, dict):
+        param_dict = [param_dict]
+
+    # Iterate over dictionaries in the list
+    for params in param_dict:
+        # Extract keys and values; sort keys to ensure consistent ordering
+        keys = sorted(params)
+        values = [params[key] for key in keys]
+
+        # Generate all combinations of parameter values
+        for combination in product(*values):
+            yield dict(zip(keys, combination))
+
+
+def main(args, output_dir):
+
     group = args.group
-    os.makedirs(OUT_DIR, exist_ok=True)
+
+    os.makedirs(output_dir, exist_ok=True)
 
     file_name = f'{group}_sweep'
+    fn = os.path.join(output_dir, file_name)
 
-    fn = os.path.join(OUT_DIR, file_name)
-
-    if args.n.lower() == 'all':
-        ps = ParameterGrid(space[group])
-    else:
-        n = int(args.n)
-        rng = np.random.RandomState(args.seed)
-        ps = ParameterSampler(space[group], n_iter=n, random_state=rng)
-
-    print(f"{len(ps)} parameters.")
-    print("Divisors:")
-    for i in range(2, len(ps)-1):
-        if len(ps) % i == 0:
-            print(f"    {i} * {len(ps) / i}")
+    ps = list(parameter_grid(space[group]))
 
     with open(fn, 'w') as fp:
         for p in ps:
@@ -66,21 +74,21 @@ def main(args):
                 p_str = args.extra + ' ' + p_str
             fp.write(p_str + '\n')
 
+    print(f"{len(ps)} parameter combinations written to {os.path.abspath(fn)}")
+
 
 if __name__ == '__main__':
+    print("Project Root:", root_dir)
     parser = argparse.ArgumentParser(
         description='Generate a set of hyper parameters')
     parser.add_argument('--group', type=str,
-                        help='choose among "test", "prod", "sac"')
-    parser.add_argument('--n', type=str, default='all',
-                        help='random search: number of hyper parameter sets '
-                        'to sample, for grid search: set to "all"')
-    parser.add_argument('--seed', type=int, default=None,
-                        help='random seed for deterministic runs')
+                        help='choose among "test", "prod", "sac"', required=True)
     parser.add_argument('--format', type=str, default='--{name}={value}',
                         help='format for parameter arguments, default is '
                         '--{name}={value}')
     parser.add_argument('--extra', type=str, help='Extra arguments to add')
 
     args = parser.parse_args()
-    main(args)
+    params_dir = os.path.join(root_dir, 'training', 'param_files')
+    print("File will be saved to:", params_dir)
+    main(args, params_dir)
