@@ -36,18 +36,18 @@ def save_model(
 
     return filename
 
-def save_configs(rnn_subdir, configs):
+def save_configs(subdir, configs):
     """Saves the configurations used to a a json file in the rnn_subdir.
 
     """
-    # TODO
-    filename = os.path.join(rnn_subdir, 'configs.json')
+    filename = os.path.join(subdir, 'configs.json')
     with open(filename, 'w') as f:
         json.dump(configs, f, indent=4)
 
 
-def generate_subdir(affixes, curriculum_type, n_heads, n_forget, task,
-                    network_number, base_path, timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S"):
+def generate_subdir(curriculum_type, n_heads, task,
+                    network_number, base_path, affixes,
+                    timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S"):
     """Creates a directory for saving results to.
 
     If the directory already exists, it will print a warning and may overwrite files.
@@ -66,7 +66,7 @@ def generate_subdir(affixes, curriculum_type, n_heads, n_forget, task,
     if curriculum_type == 'sliding':
         rnn_subdir = os.path.join(
             base_path,
-            f'{curriculum_type}_{n_heads}_{n_forget}_{task}{affix_str}network_{network_number}'
+            f'{curriculum_type}_{n_heads}_{task}{affix_str}network_{network_number}'
         )
     else:
         rnn_subdir = os.path.join(
