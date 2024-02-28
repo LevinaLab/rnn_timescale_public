@@ -4,9 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import numpy as np
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class RNN_Hierarchical(nn.Module):
@@ -32,9 +29,8 @@ class RNN_Hierarchical(nn.Module):
         if we train the taus
     '''
 
-    def __init__(self, max_depth=5,  # how many "modules" there are in the hierarchy.
-                 input_size=28,
-                 net_size=[100],
+    def __init__(self, max_depth, net_size, device,
+                 input_size=1,
                  num_classes=2,
                  bias=True,
                  num_readout_heads_per_mod=1,
@@ -52,7 +48,7 @@ class RNN_Hierarchical(nn.Module):
         self.train_tau = train_tau
         self.max_depth = max_depth  # todo: since there is 1 read-out head per module, depth = num_readout_heads so one is redundant
         self.current_depth = nn.Parameter(torch.tensor([1]), requires_grad=False)  #  The network starts with a single module and therefore depth=1. We register it as a parameter so that it is saved in the model.  #
-
+        self.device = device
         self.afunc = nn.LeakyReLU()
         self.taus = defaultdict()
         self.modules = defaultdict()  # module_dict[network][layer] = layer_object  # todo: should probably use nn.ModuleDict() instead. BUt likely doesn't support nested dicts. Can get around it using tuple keys: (module number[int], parameter name[str])
@@ -104,7 +100,7 @@ class RNN_Hierarchical(nn.Module):
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
             net_hs = []
             for d in range(self.current_depth):
-                hs = [0.1 * torch.rand(data.size(1), net_size).to(device) for net_size in self.net_size]
+                hs = [0.1 * torch.rand(data.size(1), net_size).to(self.device) for net_size in self.net_size]
                 net_hs.append(hs)
 
         # net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
