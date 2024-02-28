@@ -4,11 +4,12 @@ from datetime import datetime
 import torch
 import os
 
+
 def save_model(
         model,
         rnn_subdir,
-        N_max: int,
-        N_min: int = 2,
+        network_number,
+        stage,
         init=False,
 ):
 
@@ -18,15 +19,16 @@ def save_model(
 
     Args:
         model: torch RNN_Stack model
-        N_max: N that the network should be able to solve
-        N_min: minimum N, potentially depending on curriculum_type
+        rnn_subdir: the directory to save the model to.
+        network_number: the number of the network
+        stage: the stage of the curriculum, corresponding to the depth of the network.
         init: If True, saves with a different file name to show this is before training.
     """
 
     if init:
-        rnn_name = f'rnn_init'
+        rnn_name = f'rnn_{network_number:d}_init'
     else:
-        rnn_name = f'rnn_N{N_min:d}_N{N_max:d}'
+        rnn_name = f'rnn_{network_number:d}_N{stage:d}'
 
     filename = os.path.join(
         rnn_subdir,
@@ -35,6 +37,7 @@ def save_model(
     torch.save({'state_dict': model.state_dict()}, filename)
 
     return filename
+
 
 def save_configs(subdir, configs):
     """Saves the configurations used to a a json file in the rnn_subdir.
@@ -45,8 +48,8 @@ def save_configs(subdir, configs):
         json.dump(configs, f, indent=4)
 
 
-def generate_subdir(curriculum_type, n_heads, task,
-                    network_number, base_path, affixes,
+def generate_subdir(configs,
+                    base_path, affixes,
                     timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S"):
     """Creates a directory for saving results to.
 
@@ -56,27 +59,21 @@ def generate_subdir(curriculum_type, n_heads, task,
     ----------
     timestamp_subdir_fmt: "%Y-%b-%d-%H_%M_%S" by default, can be None to omit in directory name.
     """
+    curriculum_type = configs['CURRICULUM']
+    task = configs['TASK']
+    tau_affix = f"train_tau={configs['TRAIN_TAU']}" if not configs['TRAIN_TAU'] else ""
+    pieces = [curriculum_type, task, tau_affix] + affixes
 
-    affix_str = '_'
-    if len(affixes) > 0:
-        affix_str += '_'.join(affixes) + '_'
     if timestamp_subdir_fmt:
-        affix_str += datetime.now().strftime(timestamp_subdir_fmt) + '_'
+        pieces.append(datetime.now().strftime(timestamp_subdir_fmt) + '_')
 
-    if curriculum_type == 'sliding':
-        rnn_subdir = os.path.join(
-            base_path,
-            f'{curriculum_type}_{n_heads}_{task}{affix_str}network_{network_number}'
-        )
+    dir_name = '_'.join(pieces)
+
+    path = os.path.abspath(os.path.join(base_path, dir_name))
+    if not os.path.exists(path):
+        os.makedirs(path)
     else:
-        rnn_subdir = os.path.join(
-            base_path,
-            f'{curriculum_type}_{task}{affix_str}network_{network_number}'
-        )
+        print(f"Warning: {path} already exists. Files may be overwritten.")
 
-    if not os.path.exists(rnn_subdir):
-        os.makedirs(rnn_subdir)
-    else:
-        print(f"Warning: {rnn_subdir} already exists. Files may be overwritten.")
+    return path
 
-    return os.path.abspath(rnn_subdir)

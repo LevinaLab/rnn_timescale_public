@@ -20,7 +20,7 @@ from src.utils import save_model, generate_subdir, save_configs
 import config_parser
 
 
-def train():
+def train(network_number, output_path):
     """Only to be run from __main__ here to guarantee that the global variables are defined.
 
     Global variables:
@@ -40,10 +40,11 @@ def train():
     accuracies = []
     Ns = [2]
 
+    start_time = time.time()
     # Train the model
-    for epoch in tqdm(range(CONFIGS['NUM_EPOCHS'])):
+    for epoch in tqdm(range(CONFIGS['NUM_EPOCHS']), desc='Epochs', position=0):
         losses_step = []
-        for i in range(CONFIGS['TRAINING_STEPS']):
+        for i in tqdm(range(CONFIGS['TRAINING_STEPS']), desc='Steps', position=1):
             zero_grad_helper(OPTIMIZERS)
             sequences, labels = TASK_FUNCTION(Ns, CONFIGS['BATCH_SIZE'])
             sequences = sequences.permute(1, 0, 2).to(CONFIGS['DEVICE'])
@@ -64,6 +65,7 @@ def train():
             # OPTIMIZER.step()
             # Step the optimizers in every training step:
             stepper(stepper_object=OPTIMIZERS, max_depth=MODEL.current_depth.item(), num_steps=1)
+            sys.stdout.flush()
 
         # Step the schedulers in every epoch:
         # stepper(stepper_object=SCHEDULERS, max_depth=model.current_depth.item(), num_steps=1)
@@ -94,17 +96,17 @@ def train():
 
         stats = {'loss': losses,
                  'accuracy': accuracies,
-                 'time': time.time(),
+                 'time': time.time() - start_time,
                  'epoch': epoch,
                  'N': Ns,}
 
-        np.save(f'{subdir}/stats.npy', stats)
+        np.save(f'{output_path}/stats.npy', stats)
 
         # curriculum stuff + save
         if accuracy.mean() > 98.:  # so it doesn't forget the older tasks
             if accuracy[-1] > 98.:
                 print(f'Saving model for N = ' + str(Ns) + '...', flush=True)
-                save_model(MODEL, rnn_subdir=subdir, N_max=Ns[-1], N_min=Ns[0])
+                save_model(MODEL, rnn_subdir=output_path, network_number=network_number, stage=Ns[-1], init=False)
 
                 Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
                 MODEL.current_depth.data += 1  # change to MODEL.current_depth.data += 1. Register as parameter so torch dumps it.
@@ -176,42 +178,44 @@ if __name__ == '__main__':
 
     CRITERION = nn.CrossEntropyLoss()
 
-    tau_affix = f"train_tau={CONFIGS['TRAIN_TAU']}" if not CONFIGS['TRAIN_TAU'] else ""
-    AFFIXES = [tau_affix]
-
     NET_SIZE = [CONFIGS['NET_SIZE']]  # todo: fix
-    MODEL = RNN_Hierarchical(max_depth=CONFIGS['MAX_DEPTH'],
-                           input_size=CONFIGS['INPUT_SIZE'],
-                           net_size=NET_SIZE,  # todo: fix
-                           num_classes=CONFIGS['NUM_CLASSES'],
-                           bias=CONFIGS['BIAS'],
-                           num_readout_heads_per_mod=CONFIGS['NUM_READOUT_HEADS_PER_MOD'],
-                           tau=1.,
-                           train_tau=CONFIGS['TRAIN_TAU']
-                           )
-
-    MODEL.to(CONFIGS['DEVICE'])
-
-    OPTIMIZERS = {}
-    SCHEDULERS = {}
-    for d in range(CONFIGS['MAX_DEPTH']):
-        opt_params = {}
-        for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
-            if f'{d}:{m}' in MODEL.modules.keys():  # to control for the fact that w_ff_in only exists for d > 0
-                OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
-                                                         momentum=CONFIGS['MOMENTUM'], nesterov=True)
-                SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
 
     BASE_PATH = os.path.join(parent_dir, 'trained_models')
-    subdir = generate_subdir(curriculum_type=CONFIGS['CURRICULUM'],
-                                          n_heads=1,
-                                          task=CONFIGS['TASK'],
-                                          network_number=0,
-                                          base_path=BASE_PATH,
-                                          affixes=AFFIXES,
-                                          timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
+    subdir = generate_subdir(configs=CONFIGS,
+                             base_path=BASE_PATH,
+                             affixes=[],
+                             timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
     save_configs(subdir, CONFIGS)
-    # save init
-    save_model(MODEL, rnn_subdir=subdir, N_max=CONFIGS['MAX_DEPTH'], N_min=2, init=True)
 
-    stats = train()
+    for network_number in range(CONFIGS['REPLICAS']):
+        print("Replica #", network_number + 1, flush=True)
+        MODEL = RNN_Hierarchical(max_depth=CONFIGS['MAX_DEPTH'],
+                                 input_size=CONFIGS['INPUT_SIZE'],
+                                 net_size=NET_SIZE,  # todo: fix
+                                 device=CONFIGS['DEVICE'],
+                                 num_classes=CONFIGS['NUM_CLASSES'],
+                                 bias=CONFIGS['BIAS'],
+                                 num_readout_heads_per_mod=CONFIGS['NUM_READOUT_HEADS_PER_MOD'],
+                                 fixed_tau_val=1.,
+                                 train_tau=CONFIGS['TRAIN_TAU']
+                                 )
+
+        MODEL.to(CONFIGS['DEVICE'])
+
+        OPTIMIZERS = {}
+        SCHEDULERS = {}
+        for d in range(CONFIGS['MAX_DEPTH']):
+            opt_params = {}
+            for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+                if f'{d}:{m}' in MODEL.modules.keys():  # to control for the fact that w_ff_in only exists for d > 0
+                    OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
+                                                             momentum=CONFIGS['MOMENTUM'], nesterov=True)
+                    SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
+
+
+        # save init
+        save_model(MODEL, rnn_subdir=subdir, network_number=network_number, stage=None, init=True)
+
+        stats = train(network_number=network_number + 1, output_path=subdir)
+        print("Finished training replica #", network_number, flush=True)
+        print("Results saved in", subdir, flush=True)
