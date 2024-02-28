@@ -49,7 +49,7 @@ def save_configs(subdir, configs):
 
 
 def generate_subdir(configs,
-                    base_path, affixes,
+                    base_path, env_vars, affixes,
                     timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S"):
     """Creates a directory for saving results to.
 
@@ -62,7 +62,8 @@ def generate_subdir(configs,
     curriculum_type = configs['CURRICULUM']
     task = configs['TASK']
     tau_affix = f"train_tau={configs['TRAIN_TAU']}" if not configs['TRAIN_TAU'] else ""
-    pieces = [curriculum_type, task, tau_affix] + affixes
+    params_id = env_vars.get('PARAMS_ID', '')
+    pieces = [params_id, curriculum_type, task, tau_affix] + affixes
 
     if timestamp_subdir_fmt:
         pieces.append(datetime.now().strftime(timestamp_subdir_fmt) + '_')

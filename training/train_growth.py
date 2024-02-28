@@ -3,10 +3,10 @@ import os
 import time
 
 # Get the absolute path of the parent directory of 'src'
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Add both the parent directory and the 'src' directory to the module search path
-sys.path.insert(0, parent_dir)
-sys.path.insert(0, os.path.join(parent_dir, 'src'))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'src'))
 
 import torch
 import torch.nn as nn
@@ -17,6 +17,7 @@ from tqdm import tqdm
 from src.models.RNN_hier import RNN_Hierarchical
 import src.tasks as tasks
 from src.utils import save_model, generate_subdir, save_configs
+from src.utils import slurm
 import config_parser
 
 
@@ -178,11 +179,15 @@ if __name__ == '__main__':
 
     CRITERION = nn.CrossEntropyLoss()
 
-    NET_SIZE = [CONFIGS['NET_SIZE']]  # todo: fix
-
-    BASE_PATH = os.path.join(parent_dir, 'trained_models')
+    NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
+    # todo: must be replaced with a path provided via an environment variable.
+    BASE_PATH = slurm.get_log_dir(results_dir=os.path.join(project_root, 'trained_models'))
+    print(f"Logging results to: {BASE_PATH}", flush=True)
+    env_vars = slurm.get_env_vars()
+    # BASE_PATH = os.path.join(project_root, 'trained_models')
     subdir = generate_subdir(configs=CONFIGS,
                              base_path=BASE_PATH,
+                             env_vars=env_vars,
                              affixes=[],
                              timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
     save_configs(subdir, CONFIGS)
