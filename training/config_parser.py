@@ -4,12 +4,13 @@ import argparse
 hyperparameter_defaults = {
     # Training
     "SEED": (0, int),
-    "NUM_EPOCHS": (1000, int),
+    "NUM_EPOCHS": (50, int),
     "BATCH_SIZE": (256, int),
-    "TRAINING_STEPS": (600, int),
+    "TRAINING_STEPS": (1000, int),
+    "REPLICAS": (2, int),
     "TEST_STEPS": (50, int),
-    "DEVICE": ('cuda', str),
-    "CURRICULUM": ('grow', bool),
+    "DEVICE": ('cpu', str),
+    "CURRICULUM": ('grow', str),
     # Optimizer & Scheduling
     "LEARNING_RATE": (0.05, float),
     "MOMENTUM": (0.1, float),
@@ -22,7 +23,7 @@ hyperparameter_defaults = {
     # Agent
     "MAX_DEPTH": (50, int),
     "INPUT_SIZE": (1, int),   # learning rate for updates to p(a).
-    "NET_SIZE": (10, float),
+    "NET_SIZE": (50, float),
     "NUM_CLASSES": (2, int),
     "BIAS": (True, bool),
     "NUM_READOUT_HEADS_PER_MOD": (1, int),

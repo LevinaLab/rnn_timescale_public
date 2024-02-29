@@ -14,11 +14,11 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 space = {
     'prod': {
         'SEED': [0],
-        'NUM_EPOCHS': [1000],
+        'NUM_EPOCHS': [40],
         'BATCH_SIZE': [256],
-        'TRAINING_STEPS': [600],
+        'TRAINING_STEPS': [100],
         'TEST_STEPS': [50],
-        'DEVICE': ['cuda'],
+        'DEVICE': ['cpu'],
         'CURRICULUM': ['grow'],
         'LEARNING_RATE': [0.05],
         'MOMENTUM': [0.1],
@@ -29,7 +29,7 @@ space = {
         'TAUS_NOISE': [0.02],
         "MAX_DEPTH": [50],
         "INPUT_SIZE": [1],
-        "NET_SIZE": [10],
+        "NET_SIZE": [2, 5, 10],
         "NUM_CLASSES": [2],
         "BIAS": [True],
         "NUM_READOUT_HEADS_PER_MOD": [1],
