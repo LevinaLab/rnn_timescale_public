@@ -164,8 +164,8 @@ class RNN_Hierarchical(nn.Module):
                             hs = (1 - 1/(taus)) * hs + \
                                     self.afunc(w_hh(hs) + hier_signal + inp)/(taus)
                 net_hs[d][0] = hs
-                if t == data.size(0) - 1:
-                    out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]  # todo: is this a bug?
+            if t == data.size(0) - 1:  # todo: do we need this if statement? Just put it outside the loop.
+                out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]  # todo: is this a bug?
 
             if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
