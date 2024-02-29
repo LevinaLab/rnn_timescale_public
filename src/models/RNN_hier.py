@@ -2,8 +2,6 @@ from collections import defaultdict
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
 
 
 class RNN_Hierarchical(nn.Module):
@@ -131,38 +129,32 @@ class RNN_Hierarchical(nn.Module):
 
         net_hs_t = []
         for t in range(data.size(0)):
-
             for d in range(self.current_depth):
-                inp = net_x[d][t, ...]
-                hs = net_hs[d][0]  # todo: for now just do 1-layer modules and get the values from this single layer immediately
-                taus = self.parameter_dict[f'{d}']
-                w_hh = self.modules[f'{d}:w_hh']
-
+                  # todo: for now just do 1-layer modules and get the values from this single layer immediately
                 if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
-                    w_ff_in = self.modules[(f'{d}:w_ff_in')]
-                    # todo: '-1' implies only the last layer of each module that's fed forward to the next module. Is this correct?
-                    hier_signal = self.afunc(w_ff_in(net_hs[d - 1][-1]))
+                    ff_out = self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1])
+                    hier_signal = self.afunc(ff_out)
                 else:
                     hier_signal = 0
 
                 for i in range(len(self.net_size[d])):  # net_size[d] is normally just 1.
                     if self.train_tau:
                         if d == 0:  # todo: this is redundant if i'm already setting hier_signal to 0 for d > 0.
-                            hs = (1 - 1 / torch.clamp(taus, min=1.)) * hs + \
-                                 self.afunc(w_hh(hs) + inp) / (torch.clamp(taus, min=1.))
+                            hs = (1 - 1 / torch.clamp(self.parameter_dict[f'{d}'], min=1.)) * net_hs[d][0] + \
+                                 self.afunc(self.modules[f'{d}:w_hh'](net_hs[d][0]) + net_x[d][t, ...]) / (torch.clamp(self.parameter_dict[f'{d}'], min=1.))
                         else:
-                            hs = (1 - 1 / (torch.clamp(taus, min=1.))) * hs + \
-                                 self.afunc(w_hh(hs) + hier_signal + inp) / (torch.clamp(taus, min=1.))
+                            hs = (1 - 1 / (torch.clamp(self.parameter_dict[f'{d}'], min=1.))) * net_hs[d][0] + \
+                                 self.afunc(self.modules[f'{d}:w_hh'](net_hs[d][0]) + hier_signal + net_x[d][t, ...]) / (torch.clamp(self.parameter_dict[f'{d}'], min=1.))
                     else:
                         ## with fixed tau
                         # Note: Every layer in the module gets the hier_signal from previous module. #todo: correct?
                         if d == 0: # todo: this is redundant if i'm already setting hier_signal to 0 for d > 0.
-                            hs = (1 - 1/taus) * hs + \
-                                    self.afunc(w_hh(hs) + inp)/(taus)
+                            hs = (1 - 1/self.parameter_dict[f'{d}']) * net_hs[d][0] + \
+                                    self.afunc(self.modules[f'{d}:w_hh'](net_hs[d][0]) + net_x[d][t, ...])/(self.parameter_dict[f'{d}'])
                         else:
-                            hs = (1 - 1/(taus)) * hs + \
-                                    self.afunc(w_hh(hs) + hier_signal + inp)/(taus)
+                            hs = (1 - 1/(self.parameter_dict[f'{d}'])) * net_hs[d][0] + \
+                                    self.afunc(self.modules[f'{d}:w_hh'](net_hs[d][0]) + hier_signal + net_x[d][t, ...])/(self.parameter_dict[f'{d}'])
                 net_hs[d][0] = hs
             if t == data.size(0) - 1:  # todo: do we need this if statement? Just put it outside the loop.
                 out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]  # todo: is this a bug?
