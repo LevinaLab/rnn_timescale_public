@@ -15,8 +15,8 @@ class RNN_Hierarchical(nn.Module):
     -----------
     input_size: int
         size of input (it has been always 1)
-    net_size: list
-        list of number of neurons per layer (size larger than 1 it is for a multi layer network)
+    net_size: list of lists of ints
+        list of number of neurons per layer of each module: net_size[module][layer]
     num_classes: int
         number of classes for classification
     bias: boolean, default True
@@ -41,7 +41,7 @@ class RNN_Hierarchical(nn.Module):
 
         Args:
             max_depth: [int] how many modules there are in the hierarchy
-            net_size:  [list] of int, number of neurons per layer (size larger than 1 it is for a multi layer network)
+            net_size:  [list of lists of ints], number of neurons per module, per layer. i.e. Each list is a module.
             input_size: [int] size of input (it has been always 1)
             num_classes: [int] number of classes for classification at the end of each "head"
             bias: [bool] if we include bias terms
@@ -67,26 +67,26 @@ class RNN_Hierarchical(nn.Module):
 
         for d in range(self.max_depth):
             # todo: for now just do single layer modules. Later we can add multi-layer modules.
-            self.modules[f'{d}:input_layers'] = nn.Linear(input_size, net_size[0], bias=bias)
+            self.modules[f'{d}:input_layers'] = nn.Linear(input_size, net_size[d][0], bias=bias)
             # recurrent connections
-            self.modules[f'{d}:w_hh'] = nn.Linear(net_size[0], net_size[0], bias=bias)
+            self.modules[f'{d}:w_hh'] = nn.Linear(net_size[d][0], net_size[d][0], bias=bias)
                                            #for i in range(len(net_size))]
 
             # forward connections from another module in the hierarchy
             if d > 0:
                 # only defined for d > 0 since the very first module doesn't receive any inputs other than input data.
-                self.modules[f'{d}:w_ff_in'] = nn.Linear(net_size[-1], net_size[0], bias=bias)  # make this a list for consistency, even though only one element.
+                self.modules[f'{d}:w_ff_in'] = nn.Linear(net_size[d - 1][-1], net_size[d][0], bias=bias)  # make this a list for consistency, even though only one element.
 
             # setting the single neuron tau
             if self.train_tau: # todo: specify the depth
                 # fixed trainble tau  # todo: is this fixed or trainable? It can't be both.
-                self.taus[f'{d}'] = nn.Parameter(1 + 1. * torch.rand(net_size[0]), requires_grad=True)
+                self.taus[f'{d}'] = nn.Parameter(1 + 1. * torch.rand(net_size[d][0]), requires_grad=True)
             else:
                 # fixed tau
                 self.taus[f'{d}'] = nn.Parameter(torch.Tensor([self.fixed_tau]), requires_grad=False)
 
             # todo: for 'grow' curriculum it only makes sense to have 1 read out head per module, each with their own fc parameter sets.
-            self.modules[f'{d}:fc'] = nn.Linear(net_size[-1], num_classes, bias=bias)
+            self.modules[f'{d}:fc'] = nn.Linear(net_size[d][-1], num_classes, bias=bias)
 
 
         self.parameter_dict = nn.ParameterDict(self.taus)  # so that parameters are registered by torch.
@@ -112,7 +112,7 @@ class RNN_Hierarchical(nn.Module):
             # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
             net_hs = []
             for d in range(self.current_depth):
-                hs = [0.1 * torch.rand(data.size(1), net_size).to(self.device) for net_size in self.net_size]
+                hs = [0.1 * torch.rand(data.size(1), net_size).to(self.device) for net_size in self.net_size[d]]
                 net_hs.append(hs)
 
         # net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
@@ -126,7 +126,7 @@ class RNN_Hierarchical(nn.Module):
 
         # putting self connenctions to zero
         for d in range(self.current_depth):
-            for i in range(len(self.net_size)):
+            for i in range(len(self.net_size[d])):
                 self.modules[f'{d}:w_hh'].weight.data.fill_diagonal_(0.)
 
         net_hs_t = []
@@ -146,7 +146,7 @@ class RNN_Hierarchical(nn.Module):
                 else:
                     hier_signal = 0
 
-                for i in range(len(self.net_size)):  # net_size is normally just 1.
+                for i in range(len(self.net_size[d])):  # net_size[d] is normally just 1.
                     if self.train_tau:
                         if d == 0:  # todo: this is redundant if i'm already setting hier_signal to 0 for d > 0.
                             hs = (1 - 1 / torch.clamp(taus, min=1.)) * hs + \

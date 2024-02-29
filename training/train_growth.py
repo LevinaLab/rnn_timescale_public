@@ -91,8 +91,9 @@ def train(network_number, output_path):
         accuracy = 100 * correct_N / float(total) * len(Ns)
         accuracies.append(accuracy)
 
-        print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Accuracy {:.4f}  %'
-              .format(epoch + 1, CONFIGS["NUM_EPOCHS"], i + 1, CONFIGS['TRAINING_STEPS'], losses[-1], accuracy.mean()), flush=True)
+        print("Size of modules trained:", NET_SIZE[0:MODEL.current_depth])
+        print(f"Epoch [{epoch + 1}/{CONFIGS['NUM_EPOCHS']}], Step [{i + 1}/{CONFIGS['TRAINING_STEPS']}], "
+              f"Loss: {losses[-1]:.4f}, Accuracy {accuracy.mean():.4f}%", flush=True)
         print('({N}, accuracy):\n' + ''.join([f'({Ns[i]}, {accuracy[i]:.4f})\n' for i in range(len(Ns))]), flush=True)
 
         stats = {'loss': losses,
@@ -179,7 +180,14 @@ if __name__ == '__main__':
 
     CRITERION = nn.CrossEntropyLoss()
 
-    NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
+    # NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
+    NET_SIZE_MIN = 2
+    NET_SIZE_MAX = 50
+    NET_SIZES = [6, 7, 8, 8, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    NET_SIZES = NET_SIZES + [50] * (CONFIGS['MAX_DEPTH'] - len(NET_SIZES))
+    # NET_SIZES = [20] * CONFIGS['MAX_DEPTH']
+    NET_SIZE = [[s] for s in NET_SIZES]
+
     # todo: must be replaced with a path provided via an environment variable.
     BASE_PATH = slurm.get_log_dir(results_dir=os.path.join(project_root, 'trained_models'))
     print(f"Logging results to: {BASE_PATH}", flush=True)
