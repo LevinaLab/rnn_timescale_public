@@ -4,15 +4,15 @@ import argparse
 hyperparameter_defaults = {
     # Training
     "SEED": (0, int),
-    "NUM_EPOCHS": (50, int),
+    "NUM_EPOCHS": (500, int),
     "BATCH_SIZE": (256, int),
-    "TRAINING_STEPS": (1000, int),
+    "TRAINING_STEPS": (600, int),
     "REPLICAS": (2, int),
     "TEST_STEPS": (50, int),
     "DEVICE": ('cpu', str),
     "CURRICULUM": ('grow', str),
     # Optimizer & Scheduling
-    "LEARNING_RATE": (0.05, float),
+    "LEARNING_RATE": (0.1, float),
     "MOMENTUM": (0.1, float),
     "FREEZING_STEPS": (25, int),  # how many scheduling steps are taken upon successful completion of curriculum step.
     "GAMMA": (0.95, float),  # learning rate decay factor upon every scheduling step.
