@@ -123,7 +123,7 @@ def train(network_number, output_path):
                 # last_taus = MODEL.taus[f'{d_int - 1}']
                 # new_taus.data = last_taus.data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(last_taus.data))
 
-                stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
+                # stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
     return stats
