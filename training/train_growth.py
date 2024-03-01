@@ -114,14 +114,14 @@ def train(network_number, output_path):
                 MODEL.current_depth.data += 1  # change to MODEL.current_depth.data += 1. Register as parameter so torch dumps it.
 
                 d_int = MODEL.current_depth.item()
-                for layer_name in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
-                    new_layer = MODEL.modules[f'{d_int}:{layer_name}']
-                    last_layer = MODEL.modules[f'{d_int - 1}:{layer_name}']
-                    new_layer.weight.data = last_layer.weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(last_layer.weight.data))
-                    new_layer.bias.data = last_layer.bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(last_layer.bias.data))
-                new_taus = MODEL.taus[f'{d_int}']
-                last_taus = MODEL.taus[f'{d_int - 1}']
-                new_taus.data = last_taus.data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(last_taus.data))
+                # for layer_name in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+                #     new_layer = MODEL.modules[f'{d_int}:{layer_name}']
+                #     last_layer = MODEL.modules[f'{d_int - 1}:{layer_name}']
+                #     new_layer.weight.data = last_layer.weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(last_layer.weight.data))
+                #     new_layer.bias.data = last_layer.bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(last_layer.bias.data))
+                # new_taus = MODEL.taus[f'{d_int}']
+                # last_taus = MODEL.taus[f'{d_int - 1}']
+                # new_taus.data = last_taus.data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(last_taus.data))
 
                 stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
@@ -183,9 +183,10 @@ if __name__ == '__main__':
     # NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
     NET_SIZE_MIN = 2
     NET_SIZE_MAX = 50
-    NET_SIZES = [6, 7, 8, 8, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    NET_SIZES = NET_SIZES + [50] * (CONFIGS['MAX_DEPTH'] - len(NET_SIZES))
+    # NET_SIZES = [6, 7, 8, 8, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    # NET_SIZES = NET_SIZES + [50] * (CONFIGS['MAX_DEPTH'] - len(NET_SIZES))
     # NET_SIZES = [20] * CONFIGS['MAX_DEPTH']
+    NET_SIZES = [5] * CONFIGS['MAX_DEPTH']
     NET_SIZE = [[s] for s in NET_SIZES]
 
     # todo: must be replaced with a path provided via an environment variable.
