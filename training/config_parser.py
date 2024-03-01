@@ -9,10 +9,10 @@ hyperparameter_defaults = {
     "TRAINING_STEPS": (600, int),
     "REPLICAS": (2, int),
     "TEST_STEPS": (50, int),
-    "DEVICE": ('cpu', str),
+    "DEVICE": ('cuda', str),
     "CURRICULUM": ('grow', str),
     # Optimizer & Scheduling
-    "LEARNING_RATE": (0.1, float),
+    "LEARNING_RATE": (0.2, float),
     "MOMENTUM": (0.1, float),
     "FREEZING_STEPS": (25, int),  # how many scheduling steps are taken upon successful completion of curriculum step.
     "GAMMA": (0.95, float),  # learning rate decay factor upon every scheduling step.
