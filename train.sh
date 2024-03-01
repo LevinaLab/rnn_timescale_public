@@ -2,7 +2,7 @@
 #SBATCH --ntasks=1                # Number of tasks (see below)
 #SBATCH --cpus-per-task=1         # Number of CPU cores per task
 #SBATCH --nodes=1                 # Ensure that all cores are on one machine
-#SBATCH --time=00-12:00            # Runtime in D-HH:MM
+#SBATCH --time=00-24:00            # Runtime in D-HH:MM
 # Node feature:
 #SBATCH --constraint="gpu"
 # Specify type and number of GPUs to use:
