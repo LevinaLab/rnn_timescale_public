@@ -30,5 +30,5 @@ save_path="/u/mhami/rnn_timescale_public/trained_models"
 # insert your commands here
 # takes the same arguments as train.py but instead of number of runs you need to label the run number manually with -n
 # e.g. python train.py -c cumulative -t parity -s 0 -n 0
-python "./training/train.py" -b "$save_path" "$@"
+python "./training/train_growth.py" -b "$save_path" "$@"
 conda deactivate
