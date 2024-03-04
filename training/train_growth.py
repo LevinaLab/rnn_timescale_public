@@ -39,6 +39,7 @@ def train(network_number, output_path):
 
     losses = []
     accuracies = []
+    times = []
     Ns = [2]
 
     start_time = time.time()
@@ -90,7 +91,7 @@ def train(network_number, output_path):
 
         accuracy = 100 * correct_N / float(total) * len(Ns)
         accuracies.append(accuracy)
-
+        times.append(time.time() - start_time)
         print("Size of modules trained:", NET_SIZE[0:MODEL.current_depth])
         print(f"Epoch [{epoch + 1}/{CONFIGS['NUM_EPOCHS']}], Step [{i + 1}/{CONFIGS['TRAINING_STEPS']}], "
               f"Loss: {losses[-1]:.4f}, Accuracy {accuracy.mean():.4f}%", flush=True)
@@ -98,9 +99,9 @@ def train(network_number, output_path):
 
         stats = {'loss': losses,
                  'accuracy': accuracies,
-                 'time': time.time() - start_time,
-                 'epoch': epoch,
-                 'N': Ns,}
+                 'time': times,
+                 'epochs': epoch,
+                 'max_N': Ns,}
 
         np.save(f'{output_path}/stats.npy', stats)
 
