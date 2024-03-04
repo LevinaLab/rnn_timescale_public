@@ -92,3 +92,9 @@ octave-workspace
 
 /training_rnn/slurm_code/data/
 /training_rnn/data/
+/trained_models/
+/results/
+.idea/
+data/
+logs/
+temp/
