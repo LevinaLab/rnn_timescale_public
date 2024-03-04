@@ -20,10 +20,11 @@ hyperparameter_defaults = {
     "WEIGHT_NOISE": (0.03, float),
     "BIAS_NOISE": (0.03, float),
     "TAUS_NOISE": (0.02, float),
-    "DUPLICATE_INPUT_LAYERS": (True, bool),
+    "DUPLICATE_INPUT_LAYERS": (False, bool),
     "DUPLICATE_W_HH": (True, bool),
-    "DUPLICATE_W_FF_IN": (True, bool),
-    "DUPLICATE_FC": (True, bool),
+    "DUPLICATE_W_FF_IN": (False, bool),
+    "DUPLICATE_FC": (False, bool),
+    "DUPLICATE_TAUS": (False, bool),
     # Agent
     "MAX_DEPTH": (50, int),
     "INPUT_SIZE": (1, int),   # learning rate for updates to p(a).

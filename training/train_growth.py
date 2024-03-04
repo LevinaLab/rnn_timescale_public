@@ -116,10 +116,18 @@ def train(network_number, output_path):
                 duplication_layers = [k.replace('DUPLICATE_', '').lower()
                                       for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True]
                 d_int = MODEL.current_depth.item()
+
                 for layer_name in duplication_layers:
+                    if MODEL.taus[f'{d_int}'].data.shape != MODEL.taus[f'{d_int - 1}'].data.shape:
+                        # All DUPLICATION_ configs have to be False when a module size scheduling is taking place.
+                        raise Exception(f'Error: Modules {d_int} and {d_int - 1} have different shapes.'
+                                        f'Either turn of size scheduling, or disable all duplications.')
+
+                    if layer_name == 'taus':  # todo: this is ugly, but I couldn't find a way to register taus under model.modules
+                        MODEL.taus[f'{d_int}'].data = MODEL.taus[f'{d_int - 1}'].data * (
+                                    1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(MODEL.taus[f'{d_int - 1}'].data))
                     MODEL.modules[f'{d_int}:{layer_name}'].weight.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data))
                     MODEL.modules[f'{d_int}:{layer_name}'].bias.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data))
-                MODEL.taus[f'{d_int}'].data = MODEL.taus[f'{d_int - 1}'].data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(MODEL.taus[f'{d_int - 1}'].data))
 
                 # stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
@@ -156,6 +164,9 @@ if __name__ == '__main__':
     # Access the values of the arguments
     for k in ['CURRICULUM', 'NET_SIZE', 'TASK', 'SEED', 'DEVICE']:
         print(f"{k}: {CONFIGS[k]}")
+
+    print("Duplicating: ", [k.replace('DUPLICATE_', '').lower()
+     for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True])
 
     SEED = CONFIGS["SEED"]
     torch.manual_seed(SEED)
