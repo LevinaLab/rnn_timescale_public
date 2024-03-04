@@ -113,16 +113,13 @@ def train(network_number, output_path):
 
                 Ns = Ns + [Ns[-1] + 1]  # grow by 1 module/head each time.
                 MODEL.current_depth.data += 1  # change to MODEL.current_depth.data += 1. Register as parameter so torch dumps it.
-
+                duplication_layers = [k.replace('DUPLICATE_', '').lower()
+                                      for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True]
                 d_int = MODEL.current_depth.item()
-                # for layer_name in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
-                #     new_layer = MODEL.modules[f'{d_int}:{layer_name}']
-                #     last_layer = MODEL.modules[f'{d_int - 1}:{layer_name}']
-                #     new_layer.weight.data = last_layer.weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(last_layer.weight.data))
-                #     new_layer.bias.data = last_layer.bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(last_layer.bias.data))
-                # new_taus = MODEL.taus[f'{d_int}']
-                # last_taus = MODEL.taus[f'{d_int - 1}']
-                # new_taus.data = last_taus.data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(last_taus.data))
+                for layer_name in duplication_layers:
+                    MODEL.modules[f'{d_int}:{layer_name}'].weight.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data))
+                    MODEL.modules[f'{d_int}:{layer_name}'].bias.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data))
+                MODEL.taus[f'{d_int}'].data = MODEL.taus[f'{d_int - 1}'].data * (1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(MODEL.taus[f'{d_int - 1}'].data))
 
                 # stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
