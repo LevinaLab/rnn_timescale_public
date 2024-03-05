@@ -9,12 +9,12 @@ hyperparameter_defaults = {
     "TRAINING_STEPS": (600, int),
     "REPLICAS": (2, int),
     "TEST_STEPS": (50, int),
-    "DEVICE": ('cuda', str),
+    "DEVICE": ('cpu', str),
     "CURRICULUM": ('grow', str),
     # Optimizer & Scheduling
     "LEARNING_RATE": (0.2, float),
-    "MOMENTUM": (0.1, float),
-    "FREEZING_STEPS": (25, int),  # how many scheduling steps are taken upon successful completion of curriculum step.
+    "MOMENTUM": (0.2, float),
+    "FREEZING_STEPS": (1, int),  # how many scheduling steps are taken upon successful completion of curriculum step.
     "GAMMA": (0.95, float),  # learning rate decay factor upon every scheduling step.
     # Duplication Scheme
     "WEIGHT_NOISE": (0.03, float),
@@ -28,7 +28,7 @@ hyperparameter_defaults = {
     # Agent
     "MAX_DEPTH": (50, int),
     "INPUT_SIZE": (1, int),   # learning rate for updates to p(a).
-    "NET_SIZE": (50, float),
+    "NET_SIZE": (5, float),
     "NUM_CLASSES": (2, int),
     "BIAS": (True, bool),
     "NUM_READOUT_HEADS_PER_MOD": (1, int),
