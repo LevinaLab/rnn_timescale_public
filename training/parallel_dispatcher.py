@@ -44,7 +44,8 @@ if __name__ == '__main__':
     os.environ['PYTHONPATH'] = current_directory
     print("Current directory: ", current_directory, flush=True)
     print("CWD: ", os.getcwd())
-    params = open(f"./param_files/{args.params_file}_sweep", 'r').read().splitlines()
+    params_file_path = os.path.join(project_root, 'training', 'param_files', f'{args.params_file}_sweep')
+    params = open(params_file_path, 'r').read().splitlines()
     n_params_for_test = min([len(params), N_PARAMS_TEST_MAX])
     n_params_used = len(params) if not args.test else n_params_for_test
     print(f"Running in TEST MODE (only 10 out of {len(params)}) hyperparams"
