@@ -22,7 +22,7 @@ parser.add_argument('--params_file', type=str,
                     help='File containing parameters to sweep over, each line is one set of'
                          ' parameters executed by a separate subprocess')
 
-parser.add_argument('--path_to_script', type=str, default='train.py',
+parser.add_argument('--path_to_script', type=str, default='train_growth.py',
                     help='Path to script to run')
 parser.add_argument('--test', action='store_true',
                     help='Test it on the first 10 hyperparam combos only')
