@@ -128,8 +128,9 @@ def train(network_number, output_path):
                     if layer_name == 'taus':  # todo: this is ugly, but I couldn't find a way to register taus under model.modules
                         MODEL.taus[f'{d_int}'].data = MODEL.taus[f'{d_int - 1}'].data * (
                                     1 + CONFIGS['TAUS_NOISE'] * torch.randn_like(MODEL.taus[f'{d_int - 1}'].data))
-                    MODEL.modules[f'{d_int}:{layer_name}'].weight.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data))
-                    MODEL.modules[f'{d_int}:{layer_name}'].bias.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data))
+                    else:
+                        MODEL.modules[f'{d_int}:{layer_name}'].weight.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data))
+                        MODEL.modules[f'{d_int}:{layer_name}'].bias.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data))
 
                 stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
