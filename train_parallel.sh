@@ -5,8 +5,8 @@
 #SBATCH --cpus-per-task=40
 #SBATCH -t 0-08:00                      # Maximum execution time (D-HH:MM)
 #SBATCH --array=0-35                     # maps 1 to N to SLURM_ARRAY_TASK_ID below
-#SBATCH --output=/u/mhami/rnn_timescale_public/logs/%j.out  # File to which STDOUT will be written - make sure this is not on $HOME
-#SBATCH --error=/u/mhami/rnn_timescale_public/logs/%j.err   # File to which STDERR will be written - make sure this is not on $HOME
+#SBATCH --output=/u/mhami/rnn_timescale_public/logs/%A_%a.out # File to which STDOUT will be written - make sure this is not on $HOME
+#SBATCH --error=/u/mhami/rnn_timescale_public/logs/%A_%a.err   # File to which STDERR will be written - make sure this is not on $HOME
 #SBATCH --mail-type=ALL           # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=manihamidi@gmail.com   # Email to which notifications will be sent
 
