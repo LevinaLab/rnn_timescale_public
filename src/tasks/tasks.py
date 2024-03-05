@@ -40,7 +40,7 @@ def make_batch_Nbit_pair_parity(Ns, bs):
         labels: list of torch.Tensor of shape (bs, 1)
     """
     M_min = Ns[-1] + 2
-    M_max = M_min + 3 * Ns[-1]
+    M_max = M_min + 1.5 * Ns[-1]  # todo: consider reducing 3 to 1.5 just to save time.
     M = np.random.randint(M_min, M_max)
     with torch.no_grad():
         sequences = [generate_binary_sequence(M).unsqueeze(-1) for i in range(bs)]
@@ -52,6 +52,7 @@ def make_batch_Nbit_pair_parity(Ns, bs):
 
 def get_match(vec, N):
     return (vec[-N] == vec[-1]).long()
+
 
 def make_batch_multihead_dms(Ns, bs):
     M_min = Ns[-1] + 2
