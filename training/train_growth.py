@@ -2,13 +2,13 @@ import sys
 import os
 import time
 
-from src.utils.git_logger import report_git_status
-
 # Get the absolute path of the parent directory of 'src'
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Add both the parent directory and the 'src' directory to the module search path
 sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'src'))
+
+from src.utils.git_logger import report_git_status
 
 import torch
 import torch.nn as nn
@@ -192,7 +192,7 @@ if __name__ == '__main__':
     CRITERION = nn.CrossEntropyLoss()
 
     # NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
-    NET_SIZE = [[CONFIGS['NET_SIZE']]] * CONFIGS['MAX_DEPTH']
+    NET_SIZE = [[int(CONFIGS['NET_SIZE'])]] * CONFIGS['MAX_DEPTH']
     # NET_SIZE_MIN = 2
     # NET_SIZE_MAX = 50
     # NET_SIZES = [6, 7, 8, 8, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
