@@ -194,6 +194,7 @@ if __name__ == '__main__':
 
     # NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
     NET_SIZE = [[int(CONFIGS['NET_SIZE'])]] * CONFIGS['MAX_DEPTH']
+    CONFIGS['NET_SIZE'] = NET_SIZE  # todo: fix
     # NET_SIZE_MIN = 2
     # NET_SIZE_MAX = 50
     # NET_SIZES = [6, 7, 8, 8, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
