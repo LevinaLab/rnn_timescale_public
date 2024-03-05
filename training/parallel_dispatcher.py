@@ -9,6 +9,11 @@ from subprocess import Popen
 import multiprocessing
 import os, time
 import argparse
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Add both the parent directory and the 'src' directory to the module search path
+sys.path.insert(0, project_root)
+
 from src.utils import slurm
 
 parser = argparse.ArgumentParser(description='Run multiple processes to sweep over parameters')
