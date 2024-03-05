@@ -79,6 +79,66 @@ which takes the following arguments
     N_max (int): N that the network should be able to solve (N_max = N_min for curriculum_type='single')
     N_min (int): minimum N, potentially depending on curriculum_type
 
+# Running growing model on slurm: 
+
+## Locally
+
+### Option 1: Run a single model
+
+`python train_growth.py`  # This will run a single model with default parameters under `config_parser.py`
+
+### Option 2: Run multiple in parallel
+
+1. Make sure there is a `param_file` in `./training/param_files/prod_sweep` with the desired hyperparameters.
+
+You can generate this by modifying `sweep_generator.py` as desired and running:
+
+`python sweep_generator.py --group="prod"`
+
+2. Spawn a subprocess for each param combo in parallel using:
+
+`python parallel_dispatcher.py --group="prod" --path_to_script="train_growth.py"`
+
+Be careful not to have too many parameters in the file, as this will spawn a subprocess for each.
+
+
+## On Cluster
+
+### Option 1: GPU
+
+0. Make sure the default parameters in `config_parser.py` are desired. Push changes and pull on the cluster.
+1. Make sure the slurm file `train.sh` is set up to request the desired time limit etc.
+2. Run: `sbatch train.sh`
+
+### Option 2: Hyperparameter search with CPU
+
+0. Modify `sweep_generator.py` to include the desired hyperparameters.
+1. Create hyperparameter grid using 
+
+`python sweep_generator.py --group="prod"`
+
+2. Modify slurm file `train_parallel.sh` to pick number of nodes, cpus, and memory requested. 
+3. Run: `sbatch train_parallel.sh`.
+4. Monitor job using `squeue` and by inspecting the log files.  
+
+    * Useful command to watch status of slurm run:
+
+
+```bash
+tmux new-session \; split-window -h \; send-keys 'watch -n 1 squeue --user=<username>' C-m \; select-pane -t 0 \; send-keys "jobid=$(sacct -n -o JobID,Submit --format=JobID,Submit | awk -F'[_. ]' '{print $1, $2}' | sort -k2,2r | uniq | tail -n 1 | awk '{print $1}')" C-m
+```
+
+* __NOTE: Replace `<username>` with your username.__
+
+
+To find the parameter combo with the largest N so far, run:
+
+```bash
+echo $(find . -type f -name "*_N*" | awk -F '_N' '{print $0 " " $(NF)}' | sort -t ' ' -k2 -n | tail -1 | cut -d ' ' -f1)
+```
+
+
+
 For example: ```load_model('cumulative', 'parity', 1, 2, 50)```
 
 Update rule: 
