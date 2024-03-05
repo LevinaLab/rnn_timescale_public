@@ -2,6 +2,8 @@ import sys
 import os
 import time
 
+from src.utils.git_logger import report_git_status
+
 # Get the absolute path of the parent directory of 'src'
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Add both the parent directory and the 'src' directory to the module search path
@@ -208,6 +210,9 @@ if __name__ == '__main__':
                              env_vars=env_vars,
                              affixes=[],
                              timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
+    commit_hash, files_modified = report_git_status(os.path.join(subdir, "git_report_log.txt"))
+    CONFIGS['COMMIT_HASH'] = commit_hash
+    CONFIGS['FILES_MODIFIED'] = files_modified
     save_configs(subdir, CONFIGS)
 
     for network_number in range(CONFIGS['REPLICAS']):
