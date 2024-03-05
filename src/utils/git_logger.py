@@ -19,7 +19,13 @@ def report_git_status(log_file_path):
         summary = get_git_summary()
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while executing Git commands: {e}")
-        return
+        return None, None
+    except FileNotFoundError as e:
+        print(f"Git is probably not installed or not found in the system PATH: {e}")
+        return None, None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None, None
 
     # Prepare the content to be written to the log file
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
