@@ -4,13 +4,12 @@
 #SBATCH --mem=60G
 #SBATCH --cpus-per-task=40
 #SBATCH -t 0-48:00                      # Maximum execution time (D-HH:MM)
-#SBATCH --array=0-100                     # maps 1 to N to SLURM_ARRAY_TASK_ID below
+#SBATCH --array=0-200                     # maps 1 to N to SLURM_ARRAY_TASK_ID below
 #SBATCH --output=/u/mhami/rnn_timescale_public/logs/%A_%a.out # File to which STDOUT will be written - make sure this is not on $HOME
 #SBATCH --error=/u/mhami/rnn_timescale_public/logs/%A_%a.err   # File to which STDERR will be written - make sure this is not on $HOME
 #SBATCH --mail-type=ALL           # Type of email notification- BEGIN,END,FAIL,ALL
 #SBATCH --mail-user=manihamidi@gmail.com   # Email to which notifications will be sent
 
-# some bug
 source $HOME/.bashrc
 
 conda activate rnn_timescale
