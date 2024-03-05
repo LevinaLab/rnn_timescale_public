@@ -138,6 +138,13 @@ echo $(find . -type f -name "*_N*" | awk -F '_N' '{print $0 " " $(NF)}' | sort -
 ```
 
 
+Transferring files to Raven for analysis: 
+
+```bash
+src="./SLURM_ARRAY_JOB_ID=7669330_Mar-05-2024-13_14_48"
+dest="/raven/u/mhami/rnn_timescale_public/trained_models/"
+rsync --info=progress2 -ah --partial "$src" "$dest"
+```
 
 For example: ```load_model('cumulative', 'parity', 1, 2, 50)```
 
