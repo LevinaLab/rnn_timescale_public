@@ -92,7 +92,7 @@ def train(network_number, output_path):
                     total += labels[N_i].size(0)
 
         accuracy = 100 * correct_N / float(total) * len(Ns)
-        accuracies.append(accuracy)
+        accuracies.append(accuracy.tolist())
         times.append(time.time() - start_time)
         print("Size of modules trained:", NET_SIZE[0:MODEL.current_depth])
         print(f"Epoch [{epoch + 1}/{CONFIGS['NUM_EPOCHS']}], Step [{i + 1}/{CONFIGS['TRAINING_STEPS']}], "
