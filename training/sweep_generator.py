@@ -3,7 +3,7 @@ This file is modified from: https://github.com/CSCfi/slurm-hyper-search/blob/mas
 
 Usage:
 
-python sweep_generator.py --prod
+python sweep_generator.py --group=prod
 """
 import argparse
 import os
@@ -14,22 +14,29 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 space = {
     'prod': {
         'SEED': [0],
-        'NUM_EPOCHS': [40],
+        'NUM_EPOCHS': [200],
         'BATCH_SIZE': [256],
-        'TRAINING_STEPS': [100],
+        'TRAINING_STEPS': [500],
         'TEST_STEPS': [50],
         'DEVICE': ['cpu'],
         'CURRICULUM': ['grow'],
-        'LEARNING_RATE': [0.05],
-        'MOMENTUM': [0.1],
-        'FREEZING_STEPS': [25],
-        "GAMMA": [0.95],
-        'WEIGHT_NOISE': [0.025, 0.05, 0.1, 0.2],
-        'BIAS_NOISE': [0.03],
-        'TAUS_NOISE': [0.02],
+        'LEARNING_RATE': [0.1, 0.2, 0.3, 0.4],
+        'MOMENTUM': [0.1, 0.2, 0.3, 0.4],
+        'FREEZING_STEPS': [1],
+        "GAMMA": [0.95, 0.70, 0.40, 0.20, 0.10],
+        # Duplication Scheme
+        'WEIGHT_NOISE': [0.01, 0.05, 0.1, 0.2],
+        # 'BIAS_NOISE': [0],  # setting these to the same as weight noise for now
+        # 'TAUS_NOISE': [0],  # setting these to the same as weight noise for now
+        "DUPLICATE_INPUT_LAYERS": [False],
+        "DUPLICATE_W_HH": [True, False],
+        "DUPLICATE_W_FF_IN": [True, False],
+        "DUPLICATE_FC": [False],
+        # "DUPLICATE_TAUS": [True, False], # Setting these to same as DUPLICATE_W_HH for now
+        # Agent
         "MAX_DEPTH": [50],
         "INPUT_SIZE": [1],
-        "NET_SIZE": [2, 5, 10],
+        "NET_SIZE": [5, 10, 15, 30],
         "NUM_CLASSES": [2],
         "BIAS": [True],
         "NUM_READOUT_HEADS_PER_MOD": [1],
