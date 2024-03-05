@@ -131,7 +131,7 @@ def train(network_number, output_path):
                     MODEL.modules[f'{d_int}:{layer_name}'].weight.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data * (1 + CONFIGS['WEIGHT_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].weight.data))
                     MODEL.modules[f'{d_int}:{layer_name}'].bias.data = MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data * (1 + CONFIGS['BIAS_NOISE'] * torch.randn_like(MODEL.modules[f'{d_int - 1}:{layer_name}'].bias.data))
 
-                # stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
+                stepper(stepper_object=SCHEDULERS, max_depth=d_int - 1, num_steps=CONFIGS['FREEZING_STEPS'])
                 print(f'N = {Ns[0]}, {Ns[-1]}', flush=True)
 
     return stats
@@ -192,13 +192,14 @@ if __name__ == '__main__':
     CRITERION = nn.CrossEntropyLoss()
 
     # NET_SIZE = list(map(int, [CONFIGS['NET_SIZE']]))  # todo: fix
-    NET_SIZE_MIN = 2
-    NET_SIZE_MAX = 50
+    NET_SIZE = [[CONFIGS['NET_SIZE']]] * CONFIGS['MAX_DEPTH']
+    # NET_SIZE_MIN = 2
+    # NET_SIZE_MAX = 50
     # NET_SIZES = [6, 7, 8, 8, 8, 9, 10, 15, 20, 25, 30, 35, 40, 45, 50]
     # NET_SIZES = NET_SIZES + [50] * (CONFIGS['MAX_DEPTH'] - len(NET_SIZES))
     # NET_SIZES = [20] * CONFIGS['MAX_DEPTH']
-    NET_SIZES = [5] * CONFIGS['MAX_DEPTH']
-    NET_SIZE = [[s] for s in NET_SIZES]
+    # NET_SIZES = [5] * CONFIGS['MAX_DEPTH']
+    # NET_SIZE = [[s] for s in NET_SIZES]
 
     # todo: must be replaced with a path provided via an environment variable.
     BASE_PATH = slurm.get_log_dir(results_dir=os.path.join(project_root, 'trained_models'))
@@ -213,6 +214,11 @@ if __name__ == '__main__':
     commit_hash, files_modified = report_git_status(os.path.join(subdir, "git_report_log.txt"))
     CONFIGS['COMMIT_HASH'] = commit_hash
     CONFIGS['FILES_MODIFIED'] = files_modified
+
+    CONFIGS['TAUS_NOISE'] = CONFIGS['WEIGHT_NOISE']
+    CONFIGS['BIAS_NIOSE'] = CONFIGS['WEIGHT_NOISE']
+    CONFIGS['DUPLICATE_TAUS'] = CONFIGS['DUPLICATE_W_HH']
+
     save_configs(subdir, CONFIGS)
 
     for network_number in range(CONFIGS['REPLICAS']):
