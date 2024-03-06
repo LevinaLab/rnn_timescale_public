@@ -218,7 +218,7 @@ if __name__ == '__main__':
     CONFIGS['FILES_MODIFIED'] = files_modified
 
     CONFIGS['TAUS_NOISE'] = CONFIGS['WEIGHT_NOISE']
-    CONFIGS['BIAS_NIOSE'] = CONFIGS['WEIGHT_NOISE']
+    CONFIGS['BIAS_NOISE'] = CONFIGS['WEIGHT_NOISE']
     CONFIGS['DUPLICATE_TAUS'] = CONFIGS['DUPLICATE_W_HH']
 
     save_configs(subdir, CONFIGS)
