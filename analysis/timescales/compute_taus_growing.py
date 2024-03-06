@@ -21,33 +21,35 @@ from collections import defaultdict
 import torch
 import numpy as np
 import os
+from tqdm import tqdm
 
+from .timescales_utils import comp_acs
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.models import RNN_hier
-from timescales_utils import comp_acs
+
 
 
 def get_all_configs_and_stats(slurm_directory):
     file_paths = resolve_paths(slurm_directory)
     all_configs = []
     all_stats = []
-    for subdir, files in file_paths.items():
-        with open(os.path.join(os.path.abspath(subdir), 'configs.json'), 'r') as f:
+    for subdir, files in tqdm(file_paths.items()):
+        with open(os.path.abspath(os.path.join(slurm_directory, subdir, 'configs.json')), 'r') as f:
             config_dict = json.load(f)
             config_dict['subdir'] = subdir
             all_configs.append(config_dict)
-        with open(os.path.join(os.path.abspath(subdir), 'stats.npy'), 'r') as f:
-            stats_dict = np.load(f, allow_pickle=True).item()
-            stats_dict['subdir'] = subdir
-            all_stats.append(stats_dict)
+        stats_path = os.path.abspath(os.path.join(slurm_directory, subdir, 'stats.npy'))
+        stats_dict = np.load(stats_path, allow_pickle=True).item()
+        stats_dict['subdir'] = subdir
+        all_stats.append(stats_dict)
 
     return all_configs, all_stats
 
 def resolve_paths(slurm_directory):
     data_path = os.path.join(project_root, 'trained_models', slurm_directory)
     # sub directories:
-    subdirs = [d for d in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, d))]
+    subdirs = [d for d in tqdm(os.listdir(data_path)) if os.path.isdir(os.path.join(data_path, d))]
     file_paths = {subdir: os.listdir(os.path.join(data_path, subdir)) for subdir in subdirs}
     return file_paths
 
