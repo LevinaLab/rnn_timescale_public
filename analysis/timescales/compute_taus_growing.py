@@ -34,8 +34,13 @@ def get_all_configs_and_stats(slurm_directory):
     file_paths = resolve_paths(slurm_directory)
     all_configs = []
     all_stats = []
+    dont_exist = []
     for subdir, files in tqdm(file_paths.items()):
-        with open(os.path.abspath(os.path.join(slurm_directory, subdir, 'configs.json')), 'r') as f:
+        configs_path = os.path.abspath(os.path.join(slurm_directory, subdir, 'configs.json'))
+        if not os.path.isfile(configs_path):
+            dont_exist.append(configs_path)
+            continue  # do not bother with import of any file if the configs file is absent. 
+        with open(configs_path, 'r') as f:
             config_dict = json.load(f)
             config_dict['subdir'] = subdir
             all_configs.append(config_dict)
@@ -44,7 +49,7 @@ def get_all_configs_and_stats(slurm_directory):
         stats_dict['subdir'] = subdir
         all_stats.append(stats_dict)
 
-    return all_configs, all_stats
+    return all_configs, all_stats, dont_exist
 
 def resolve_paths(slurm_directory):
     data_path = os.path.join(project_root, 'trained_models', slurm_directory)
@@ -54,24 +59,26 @@ def resolve_paths(slurm_directory):
     return file_paths
 
 
-def load_and_hydrate_hierarchical_model(full_path, configs_file_name='configs.json'):
+def load_and_hydrate_hierarchical_model(full_path, device='cpu', configs_file_name='configs.json'):
     parent_dir = os.path.dirname(full_path)
     file_path = os.path.join(parent_dir, configs_file_name)
     with open(file_path, 'r') as f:
         configs = json.load(f)
-    rnn = init_hierarchical_model(configs)
-    rnn.load_state_dict(torch.load(full_path, map_location=torch.device('cpu'))['state_dict'], strict=False)
+    rnn = init_hierarchical_model(configs).to(device)
+    rnn.load_state_dict(torch.load(full_path, map_location=torch.device(device))['state_dict'], strict=False)
     return rnn, configs
 
 
 def init_hierarchical_model(CONFIGS):
     # init new model
-
-    if type(CONFIGS['NET_SIZE']) == int:  # todo: fix this
-        NET_SIZE = [CONFIGS['NET_SIZE']] * CONFIGS['MAX_DEPTH']
+    # print(CONFIGS['NET_SIZE'])
+    if type(CONFIGS['NET_SIZE']) != list:  # todo: fix this
+        NET_SIZE = [[int(CONFIGS['NET_SIZE'])]] * CONFIGS['MAX_DEPTH']
     else:
         NET_SIZE = CONFIGS['NET_SIZE']
 
+    # print(NET_SIZE)
+    # print(CONFIGS)
     rnn = RNN_hier.RNN_Hierarchical(max_depth=CONFIGS['MAX_DEPTH'],
                                  input_size=CONFIGS['INPUT_SIZE'],
                                  net_size=NET_SIZE,  # todo: fix
