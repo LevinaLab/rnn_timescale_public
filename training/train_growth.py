@@ -212,7 +212,7 @@ if __name__ == '__main__':
                              base_path=BASE_PATH,
                              env_vars=env_vars,
                              affixes=[],
-                             timestamp_subdir_fmt="%Y-%b-%d-%H_%M_%S")
+                             timestamp_subdir_fmt='')
     commit_hash, files_modified = report_git_status(os.path.join(subdir, "git_report_log.txt"))
     CONFIGS['COMMIT_HASH'] = commit_hash
     CONFIGS['FILES_MODIFIED'] = files_modified
