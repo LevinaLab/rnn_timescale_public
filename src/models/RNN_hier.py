@@ -130,10 +130,13 @@ class RNN_Hierarchical(nn.Module):
 
         net_hs_t = []
         for t in range(data.size(0)):
+            # create a new list of states to not overwrite t - 1.
+            new_net_hs = []
             for d in range(self.current_depth):
                   # todo: for now just do 1-layer modules and get the values from this single layer immediately
                 if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
+                    # hier_signal = self.afunc(self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1]))
                     hier_signal = self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1])
                 else:
                     hier_signal = 0
@@ -155,25 +158,17 @@ class RNN_Hierarchical(nn.Module):
                         else:
                             hs = (1 - 1/(self.parameter_dict[f'{d}'])) * net_hs[d][0] + \
                                     self.afunc(self.modules[f'{d}:w_hh'](net_hs[d][0]) + hier_signal + net_x[d][t, ...])/(self.parameter_dict[f'{d}'])
-                net_hs[d][0] = hs
-            if t == data.size(0) - 1:  # todo: do we need this if statement? Just put it outside the loop.
-                out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]
+                # net_hs[d][0] = hs
+                new_net_hs.append([hs])
+            net_hs = new_net_hs
 
             if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
                 # hs_t.append([h.detach().to('cpu') for h in hs])
                 net_hs_t.append([hs_[0].clone() for hs_ in net_hs])
-            # if classify_in_time:  # todo: let's just assume classify_in_time == False for now.
-            #     if index_in_head is None:
-            #         out.append([self.module_dict['fc'][i](net_hs[i][-1]) for i in range(self.current_depth)])
-            #     else:
-            #         out.append([self.fc[index_in_head](hs[-1])])
 
+        if t == data.size(0) - 1:
+            out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]
 
-        # if not classify_in_time:
-        #     if index_in_head is None:
-        #         out = [self.modules[f'{d}:fc'](hs) for d in range(self.current_depth)]
-        #     else:
-        #         out = [self.modules[f'{d}:fc'][index_in_head](hs)]
 
         if savetime:
             return net_hs_t, out
