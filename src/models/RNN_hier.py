@@ -91,9 +91,8 @@ class RNN_Hierarchical(nn.Module):
         self.non_trained_params = nn.ParameterList([self.current_depth])
         self.module_dict = nn.ModuleDict(self.modules)
 
-
-    def forward(self, data, net_hs=None, hs=None, classify_in_time=False, savetime=False, index_in_head=None):
-        '''
+    def forward(self, data, net_hs=None, hs=None, savetime=False):
+        """
         input: data [batch_size, sequence length, input_features]
         output:
                 hs: list of hidden layer states at final time
@@ -101,19 +100,15 @@ class RNN_Hierarchical(nn.Module):
                     shape=[time, num_layers]
                 out: readout from the fc layers at the end,
                     shape=[batch_size, self.num_classes],
-                or if classify_in_time == True:
-                    shape=[time, batch_size, self.num_classes]
         index_in_head: if we want to have faster evaluation,
             we can pass the index of the head that we want to return
-        '''
-        if net_hs is None:  # todo: when is the function ever called with net_hs =! None?
-            # hs = [torch.zeros(data.size(1), self.net_size[i]).to(device) for i in range(len(self.net_size))]
+        """
+        if net_hs is None:  # randomly initializes rnn state for use in first time step of forward pass
             net_hs = []
             for d in range(self.current_depth):
                 hs = [0.1 * torch.rand(data.size(1), net_size).to(self.device) for net_size in self.net_size[d]]
                 net_hs.append(hs)
 
-        # net_hs_t = [[h.clone() for h in hs] for hs in net_hs]  # todo: this isn't used anywhere, except save_time!!
         net_x = []
         for d in range(self.current_depth):
             # todo: what does this stack().mean() do? Why would ther be any averaging anyways?
@@ -136,7 +131,6 @@ class RNN_Hierarchical(nn.Module):
                   # todo: for now just do 1-layer modules and get the values from this single layer immediately
                 if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
-                    # hier_signal = self.afunc(self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1]))
                     hier_signal = self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1])
                 else:
                     hier_signal = 0
@@ -158,16 +152,13 @@ class RNN_Hierarchical(nn.Module):
                         else:
                             hs = (1 - 1/(self.parameter_dict[f'{d}'])) * net_hs[d][0] + \
                                     self.afunc(self.modules[f'{d}:w_hh'](net_hs[d][0]) + hier_signal + net_x[d][t, ...])/(self.parameter_dict[f'{d}'])
-                # net_hs[d][0] = hs
                 new_net_hs.append([hs])
             net_hs = new_net_hs
 
-            if savetime:  # todo: why append? Do we want to save the hidden layers' states before and after the update?
-                # hs_t.append([h.detach().to('cpu') for h in hs])
+            if savetime:  # saves the state of the network at every time step (used for auto-correlation analysis)
                 net_hs_t.append([hs_[0].clone() for hs_ in net_hs])
 
-        if t == data.size(0) - 1:
-            out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]
+        out = [self.modules[f'{d_i}:fc'](net_hs[d_i][0]) for d_i in range(self.current_depth)]
 
 
         if savetime:
