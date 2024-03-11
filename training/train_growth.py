@@ -271,7 +271,9 @@ if __name__ == '__main__':
                 elif m != 'taus' and f'{d}:{m}' in MODEL.modules.keys():
                     OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
                                                              momentum=CONFIGS['MOMENTUM'], nesterov=True)
-                if m in scheduled_layers:
+
+                # to control for the fact that w_ff_in only exists for d > 0
+                if m in scheduled_layers and f'{d}:{m}' in MODEL.modules.keys():
                     SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
 
 
