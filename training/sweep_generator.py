@@ -20,10 +20,16 @@ space = {
         'TEST_STEPS': [50],
         'DEVICE': ['cpu'],
         'CURRICULUM': ['grow'],
+        # Optimizer & Scheduling
         'LEARNING_RATE': [0.1, 0.2, 0.3, 0.4],
         'MOMENTUM': [0.1, 0.2, 0.3, 0.4],
         'FREEZING_STEPS': [1],
         "GAMMA": [0.95, 0.70, 0.40, 0.20, 0.10],
+        "SCHEDULE_INPUT_LAYERS": (False, bool),
+        "SCHEDULE_W_HH": [True, False],
+        "SCHEDULE_W_FF_IN": [True, False],
+        "SCHEDULE_FC": [True, False],
+        "SCHEDULE_TAUS": [True, False],
         # Duplication Scheme
         'WEIGHT_NOISE': [0.01, 0.05, 0.1, 0.2],
         # 'BIAS_NOISE': [0],  # setting these to the same as weight noise for now
@@ -32,6 +38,7 @@ space = {
         "DUPLICATE_W_HH": [True, False],
         "DUPLICATE_W_FF_IN": [True, False],
         "DUPLICATE_FC": [False],
+        "DUPLICATE_TAUS": [True, False],
         # "DUPLICATE_TAUS": [True, False], # Setting these to same as DUPLICATE_W_HH for now
         # Agent
         "MAX_DEPTH": [50],
