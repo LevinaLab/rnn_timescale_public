@@ -160,6 +160,7 @@ def stepper(stepper_object, max_depth, num_steps):
 
 ###############################################################
 
+
 if __name__ == '__main__':
 
     # Create an ArgumentParser object
@@ -248,7 +249,7 @@ if __name__ == '__main__':
             opt_params = {}
             for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc', 'taus']:
                 if f'{d}:{m}' in MODEL.modules.keys():  # to control for the fact that w_ff_in only exists for d > 0
-                    if m is 'taus':
+                    if m == 'taus':
                         OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD([MODEL.taus[f'{d}']], lr=CONFIGS['LEARNING_RATE'],
                                                                  momentum=CONFIGS['MOMENTUM'], nesterov=True)
                     else:
