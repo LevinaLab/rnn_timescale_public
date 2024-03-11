@@ -144,11 +144,22 @@ def zero_grad_helper(optimizers):
 
 
 def stepper(stepper_object, max_depth, num_steps):
+    """ steps through torch optimizers and schedulers for whole network.
+    Parameters
+    ----------
+    stepper_object: list of optimizers or schedulers.
+    max_depth: depth to iterate up to, for schedulers it's current_depth-1 , for optimizers its current_depth
+    num_steps: how many times to apply the step method.
+
+    Returns None
+    -------
+
+    """
     for d in range(max_depth):
         for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc', 'taus']:
             try:
                 for _ in range(num_steps):
-                    if m in stepper_object[f'{d}:{m}'].__dict__.keys():
+                    if f'{d}:{m}' in stepper_object.keys():
                         stepper_object[f'{d}:{m}'].step()
             # so I allow for w_ff_in to not exist for d == 0 but still raise if layer is not found for d > 0.
             except KeyError:
@@ -173,6 +184,8 @@ if __name__ == '__main__':
     print("Duplicating: ", [k.replace('DUPLICATE_', '').lower()
      for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True])
 
+    print(f"Scheduling with Gamma={CONFIGS['GAMMA']}:", [k.replace('DUPLICATE_', '').lower()
+     for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True])
     SEED = CONFIGS["SEED"]
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
@@ -248,15 +261,15 @@ if __name__ == '__main__':
         for d in range(CONFIGS['MAX_DEPTH']):
             opt_params = {}
             for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc', 'taus']:
-                if f'{d}:{m}' in MODEL.modules.keys():  # to control for the fact that w_ff_in only exists for d > 0
-                    if m == 'taus':
-                        OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD([MODEL.taus[f'{d}']], lr=CONFIGS['LEARNING_RATE'],
-                                                                 momentum=CONFIGS['MOMENTUM'], nesterov=True)
-                    else:
-                        OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
-                                                                 momentum=CONFIGS['MOMENTUM'], nesterov=True)
-                    if m in scheduled_layers:
-                        SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
+                if m == 'taus':
+                    OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD([MODEL.taus[f'{d}']], lr=CONFIGS['LEARNING_RATE'],
+                                                             momentum=CONFIGS['MOMENTUM'], nesterov=True)
+                # to control for the fact that w_ff_in only exists for d > 0
+                elif m != 'taus' and f'{d}:{m}' in MODEL.modules.keys():
+                    OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
+                                                             momentum=CONFIGS['MOMENTUM'], nesterov=True)
+                if m in scheduled_layers:
+                    SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
 
 
         # save init
