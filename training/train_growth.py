@@ -145,10 +145,11 @@ def zero_grad_helper(optimizers):
 
 def stepper(stepper_object, max_depth, num_steps):
     for d in range(max_depth):
-        for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+        for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc', 'taus']:
             try:
                 for _ in range(num_steps):
-                    stepper_object[f'{d}:{m}'].step()
+                    if m in stepper_object[f'{d}:{m}'].__dict__.keys():
+                        stepper_object[f'{d}:{m}'].step()
             # so I allow for w_ff_in to not exist for d == 0 but still raise if layer is not found for d > 0.
             except KeyError:
                 if 'w_ff_in' in m and d == 0:
@@ -238,15 +239,23 @@ if __name__ == '__main__':
 
         MODEL.to(CONFIGS['DEVICE'])
 
+        scheduled_layers = [k.replace('SCHEDULE_', '').lower()
+                              for k, v in CONFIGS.items() if k.startswith('SCHEDULE_') and v is True]
+
         OPTIMIZERS = {}
         SCHEDULERS = {}
         for d in range(CONFIGS['MAX_DEPTH']):
             opt_params = {}
-            for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc']:
+            for m in ['input_layers', 'w_hh', 'w_ff_in', 'fc', 'taus']:
                 if f'{d}:{m}' in MODEL.modules.keys():  # to control for the fact that w_ff_in only exists for d > 0
-                    OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
-                                                             momentum=CONFIGS['MOMENTUM'], nesterov=True)
-                    SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
+                    if m is 'taus':
+                        OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD([MODEL.taus[f'{d}']], lr=CONFIGS['LEARNING_RATE'],
+                                                                 momentum=CONFIGS['MOMENTUM'], nesterov=True)
+                    else:
+                        OPTIMIZERS[f'{d}:{m}'] = torch.optim.SGD(MODEL.modules[f'{d}:{m}'].parameters(), lr=CONFIGS['LEARNING_RATE'],
+                                                                 momentum=CONFIGS['MOMENTUM'], nesterov=True)
+                    if m in scheduled_layers:
+                        SCHEDULERS[f'{d}:{m}'] = torch.optim.lr_scheduler.ExponentialLR(OPTIMIZERS[f'{d}:{m}'], gamma=CONFIGS['GAMMA'])
 
 
         # save init

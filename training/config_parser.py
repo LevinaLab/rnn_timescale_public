@@ -16,6 +16,11 @@ hyperparameter_defaults = {
     "MOMENTUM": (0.2, float),
     "FREEZING_STEPS": (1, int),  # how many scheduling steps are taken upon successful completion of curriculum step.
     "GAMMA": (0.95, float),  # learning rate decay factor upon every scheduling step.
+    "SCHEDULE_INPUT_LAYERS": (False, bool),
+    "SCHEDULE_W_HH": (True, bool),
+    "SCHEDULE_W_FF_IN": (False, bool),
+    "SCHEDULE_FC": (False, bool),
+    "SCHEDULE_TAUS": (False, bool),
     # Duplication Scheme
     "WEIGHT_NOISE": (0.03, float),
     "BIAS_NOISE": (0.03, float),
