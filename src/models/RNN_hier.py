@@ -134,7 +134,7 @@ class RNN_Hierarchical(nn.Module):
                   # todo: for now just do 1-layer modules and get the values from this single layer immediately
                 if d > 0:
                     # if we are in the second module or higher, we have input from the previous (j-1) module
-                    hier_signal = self.afunc(self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1]))
+                    hier_signal = self.modules[f'{d}:w_ff_in'](net_hs[d - 1][-1])
                 else:
                     hier_signal = 0
 
