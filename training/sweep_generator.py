@@ -25,7 +25,7 @@ space = {
         'MOMENTUM': [0.1],
         'FREEZING_STEPS': [1],
         "GAMMA": [0.95, 0.10],
-        "SCHEDULE_INPUT_LAYERS": (False, bool),
+        "SCHEDULE_INPUT_LAYERS": [False],
         "SCHEDULE_W_HH": [True, False],
         "SCHEDULE_W_FF_IN": [True, False],
         "SCHEDULE_FC": [True, False],
