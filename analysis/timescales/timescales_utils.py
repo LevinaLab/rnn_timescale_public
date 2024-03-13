@@ -279,41 +279,65 @@ def model_comp(ac, lags, min_lag, max_lag):
     return selected_model, selected_tau
 
 
-def comp_effective_autocorr(data, level):
-    """
+def effective_taus(data, level, max_lag, fit_lag):
+    batch_size = data.shape[0]
+    time_steps = data.shape[3]
+    # Assumes data.shape = (batch_size, num_modules, num_neurons, time_steps)
+    results = {}
+    if level == 'module':
+        data_s = np.sum(data, axis=2)  # ( batch_size, num_modules, time_steps)  # todo: shoudl this be sum or average?
+        acs = [comp_ac_fft(data_s[:, j, :])[0:max_lag] for j in range(data_s.shape[1])]  # each module is treated as big neuron.
+        results['ac_pop'] = acs
+        results['effective'] = [single_neuron_ffts(data[:, j, :, :], max_lag, fit_lag) for j in range(data.shape[1])]
+    elif level == 'network':
+        # data_ready = np.sum(data, axis=[1, 2])  # (batch_size, time_steps)
+        data_s = np.apply_over_axes(np.sum, data, [1, 2])
+        data_ready = np.squeeze(data_s)
+        ac = comp_ac_fft(data_ready)
+        results['ac_pop'] = [ac]
+        data_ready = data.reshape(batch_size, -1, time_steps)  # (batch_size, num_modules x num_neurons, time_steps)
+        single_results = single_neuron_ffts(data_ready, max_lag, fit_lag)
+        results['effective'] = [single_results]
+    else:
+        raise ValueError('level should be either "module" or "network"')
+    return results
 
-    Parameters
-    ----------
-    data
-    level
-    time_steps
-    num_modules
-    num_neurons
-    batch_size
 
-    Returns
-    -------
+def single_neuron_ffts(data, max_lag, fit_lag):
+    """"""
+    # Assumes data.shape = (batch_size, num_neurons, time_steps)
+    batch_size = data.shape[0]
+    num_neurons = data.shape[1]
+    time_steps = data.shape[2]
 
-    """
-    # Assumes data is of shape [0:time, 1:modules, 2:batch, 3:neurons]
-    # want: (batch, num_modules, num_neurons, time_steps)
-    # collapse: (batch x num_modules x num_neurons, time_steps)
-    time_steps = data.shape[0]
-    batch_size = data.shape[2]
-    data_t = data.transpose(2, 1, 3, 0)  # (batch_size, num_modules,  num_neurons, time_steps)
-    if level == 'network':
-        data_ready = np.sum(data_t, axis=[1, 2])  # (batch_size, time_steps)
-        acs = comp_ac_fft(data_ready)
-    elif level == 'single_neuron':
-        # data_ready = data_t.reshape(-1, time_steps)  # (batch_size x num_modules x num_neurons, time_steps)
-        data_ready = data_t.reshape(batch_size, -1, time_steps)  # (batch_size x num_modules x num_neurons, time_steps)
-        acs = [comp_ac_fft(data_ready[:, j, :] for j in range(data_ready.shape[1]))]
-    elif level == 'module':
-        data_t_s = np.sum(data_t, axis=2)  # ( batch_size, num_modules, time_steps)
-        # data_ready = data_t_s.reshape(-1, time_steps)  # (batch_size x num_modules, time_steps)
-        acs = [comp_ac_fft(data_t_s[:, j, :]) for j in range(data_t_s.shape[1])]
+    ac_all_single = np.zeros((num_neurons, max_lag))
+    selected_model_all = np.zeros(num_neurons)
+    tau_net_all = np.zeros(num_neurons)
+    min_lag = 0
+    lags = np.arange(0, max_lag + 1)
 
-    return acs
+    for j in tqdm(range(data.shape[1])):
+        ac_sum = 0
+        ac = comp_ac_fft(data[:, j, :])
+        ac_sum = ac_sum + ac[0:max_lag]
+        ac_all_single[j, :] = ac_sum / batch_size
+
+        ac_fit = ac_all_single[j, :]
+        # xdata = lags[min_lag:fit_lag + 1]
+        # ydata = ac_fit[min_lag:fit_lag + 1] / ac_fit[0]
+
+        # estimating AC timescales
+        selected_model_all[j], selected_tau = model_comp(ac_fit, lags, min_lag, fit_lag)
+        if selected_model_all[j] == 1:
+            tau_net_all[j] = selected_tau
+        elif selected_model_all[j] == 2:
+            tau_net_all[j] = selected_tau[1]
+        else:
+            tau_net_all[j] = np.nan
+
+    return {'ac_all_single': ac_all_single,
+            'selected_model_all': selected_model_all,
+            'tau_net_all': tau_net_all}
 
 
 def comp_acs_growing(rnn, save_path, N_max_max,
