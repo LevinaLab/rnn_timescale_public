@@ -283,6 +283,43 @@ def model_comp(ac, lags, min_lag, max_lag):
     return selected_model, selected_tau
 
 
+def comp_effective_autocorr(data, level):
+    """
+
+    Parameters
+    ----------
+    data
+    level
+    time_steps
+    num_modules
+    num_neurons
+    batch_size
+
+    Returns
+    -------
+
+    """
+    # Assumes data is of shape [0:time, 1:modules, 2:batch, 3:neurons]
+    # want: (batch, num_modules, num_neurons, time_steps)
+    # collapse: (batch x num_modules x num_neurons, time_steps)
+    time_steps = data.shape[0]
+    batch_size = data.shape[2]
+    data_t = data.transpose(2, 1, 3, 0)  # (batch_size, num_modules,  num_neurons, time_steps)
+    if level == 'network':
+        data_ready = np.sum(data_t, axis=[1, 2])  # (batch_size, time_steps)
+        acs = comp_ac_fft(data_ready)
+    elif level == 'single_neuron':
+        # data_ready = data_t.reshape(-1, time_steps)  # (batch_size x num_modules x num_neurons, time_steps)
+        data_ready = data_t.reshape(batch_size, -1, time_steps)  # (batch_size x num_modules x num_neurons, time_steps)
+        acs = [comp_ac_fft(data_ready[:, j, :] for j in range(data_ready.shape[1]))]
+    elif level == 'module':
+        data_t_s = np.sum(data_t, axis=2)  # ( batch_size, num_modules, time_steps)
+        # data_ready = data_t_s.reshape(-1, time_steps)  # (batch_size x num_modules, time_steps)
+        acs = [comp_ac_fft(data_t_s[:, j, :]) for j in range(data_t_s.shape[1])]
+
+    return acs
+
+
 def comp_acs_growing(rnn, save_path, N_max_max,
                      T, num_neurons, num_trials, max_lag,
                      fit_lag, burn_T, affixes=[]):
