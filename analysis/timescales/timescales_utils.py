@@ -58,7 +58,7 @@ def make_batch_Nbit_parity(M, bs):
     return sequences
 
 
-def make_binary_data_growing(model, M, BATCH_SIZE, NET_SIZE, device):
+def make_binary_data_growing(model, M, BATCH_SIZE, device):
     '''
     Simulate the model with binary inputs and return the activity of RNN units.
 
@@ -87,17 +87,13 @@ def make_binary_data_growing(model, M, BATCH_SIZE, NET_SIZE, device):
     with torch.no_grad():
         h_ns, out_class = model.forward(sequences, savetime=True)
 
-    # dict of {layer_i: array(timerseries)} where timeseries is shape [timesteps, batch_size, num_neurons]
-    # np.array([h_n.cpu().numpy() for h_n in h_ns])
     data = []  # shape: [time, module, batch, neurons]
-    # save_dict = {}  # for when/if sina get it wrong
     for h_n_t in h_ns:  # h_ns[ h_n_t=0, h_n_t=1, ...]
         data.append([])
         for d, h_n_d in enumerate(h_n_t):  # h_n_t[ h_n_depth=0, h_n_depth=1, ...]
             data[-1].append(h_n_d.cpu().numpy())  # todo: includes all depths even those that haven't been trained yet
-            # save_dict[str(d).zfill(2)] = h_n_d
-    # data = np.array(data).reshape(M, BATCH_SIZE, -1)  # todo: what does this do exactly?
     data = np.array(data)
+    data = data.transpose(2, 1, 3, 0)  # (batch_size, num_modules,  num_neurons, time_steps)
     return data
 
 
