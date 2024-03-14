@@ -6,10 +6,18 @@ Usage:
 python sweep_generator.py --group=prod
 """
 import argparse
+import itertools
 import os
-from itertools import product
+
+import pandas as pd
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+
+class EqualTo:
+    def __init__(self, field):
+        self.field = field
+
 
 space = {
     'prod': {
@@ -24,19 +32,19 @@ space = {
         'LEARNING_RATE': [0.2, 0.4],
         'MOMENTUM': [0.1],
         'FREEZING_STEPS': [1],
-        "GAMMA": [0.95, 0.10],
+        "GAMMA": [0.0, 0.9],
         "SCHEDULE_INPUT_LAYERS": [False],
         "SCHEDULE_W_HH": [True, False],
-        "SCHEDULE_W_FF_IN": [True, False],
+        "SCHEDULE_W_FF_IN": EqualTo(field='SCHEDULE_W_HH'),  # [True, False],
         "SCHEDULE_FC": [True, False],
         "SCHEDULE_TAUS": [True, False],
         # Duplication Scheme
         'WEIGHT_NOISE': [0.05, 0.3],
-        # 'BIAS_NOISE': [0],  # todo: setting these to the same as weight noise for now
-        # 'TAUS_NOISE': [0],  # todo: setting these to the same as weight noise for now
-        "DUPLICATE_INPUT_LAYERS": [True, False],
-        # "DUPLICATE_W_HH": [True, False],    # todo: setting these to the same as DUPLICATE_INPUT_LAYERS for now
-        # "DUPLICATE_W_FF_IN": [True, False], # todo: setting these to the same as DUPLICATE_INPUT_LAYERS for now
+        'BIAS_NOISE': EqualTo(field='WEIGHT_NOISE'),
+        'TAUS_NOISE': EqualTo(field='WEIGHT_NOISE'),
+        "DUPLICATE_W_HH": [True, False],
+        "DUPLICATE_INPUT_LAYERS": EqualTo(field='DUPLICATE_W_HH'),
+        "DUPLICATE_W_FF_IN": EqualTo(field='DUPLICATE_W_HH'),
         "DUPLICATE_FC": [False],
         "DUPLICATE_TAUS": [True, False],
         # "DUPLICATE_TAUS": [True, False], # Setting these to same as DUPLICATE_W_HH for now
@@ -53,33 +61,21 @@ space = {
 }
 
 
-def parameter_grid(param_dict):
-    """Generate all combinations of parameters from a dictionary or a list of dictionaries."""
-    # If param_dict is a dictionary, wrap it in a list
-    if isinstance(param_dict, dict):
-        param_dict = [param_dict]
+def parameter_grid_with_conditionals(param_dict):
 
-    # Iterate over dictionaries in the list
-    for params in param_dict:
-        # Extract keys and values; sort keys to ensure consistent ordering
-        keys = sorted(params)
-        values = [params[key] for key in keys]
+    param_dict_no_cond = {k: v for k, v in param_dict.items() if isinstance(v, list)}
+    combos = itertools.product(*param_dict_no_cond.values())
+    df = pd.DataFrame(combos, columns=param_dict_no_cond.keys())
 
-        # Generate all combinations of parameter values
-        for combination in product(*values):
-            yield dict(zip(keys, combination))
+    param_dict_cond = {k: v for k, v in param_dict.items() if isinstance(v, EqualTo)}
+    for k, v in param_dict_cond.items():
+        df[k] = df[v.field]
+
+    return df
 
 
-def main(args, output_dir):
-
-    group = args.group
-
-    os.makedirs(output_dir, exist_ok=True)
-
-    file_name = f'{group}_sweep'
+def write_to_disk(ps, output_dir, file_name):
     fn = os.path.join(output_dir, file_name)
-
-    ps = list(parameter_grid(space[group]))
 
     with open(fn, 'w') as fp:
         for p in ps:
@@ -89,6 +85,15 @@ def main(args, output_dir):
             fp.write(p_str + '\n')
 
     print(f"{len(ps)} parameter combinations written to {os.path.abspath(fn)}")
+
+
+def main(args, output_dir):
+    group = args.group
+    os.makedirs(output_dir, exist_ok=True)
+    df = parameter_grid_with_conditionals(space[group])
+    ps = df.to_dict(orient='records')
+    file_name = f'{group}_sweep'
+    write_to_disk(ps, output_dir, file_name)
 
 
 if __name__ == '__main__':
