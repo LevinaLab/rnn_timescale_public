@@ -200,7 +200,7 @@ def model_comp(ac, lags, min_lag, max_lag):
         RSS =((yfit - ydata)**2).sum()
         n = len(xdata) # number of samples
         k = 2 # number of parameters
-        AIC_1 = 2*k + n*np.log(RSS)        
+        AIC_1 = 2*k + n*np.log(RSS/n)        
     except Exception:
                 AIC_1 = 10**5
                 pass
@@ -213,7 +213,7 @@ def model_comp(ac, lags, min_lag, max_lag):
         RSS =((yfit - ydata)**2).sum()
         n = len(xdata) # number of samples
         k = 4 # number of parameters
-        AIC_2 = 2*k + n*np.log(RSS)
+        AIC_2 = 2*k + n*np.log(RSS/n)
     except Exception:
                 AIC_2 = 10**5
                 pass
@@ -343,8 +343,6 @@ def comp_acs(device, data_path, save_path, curriculum_type, task, network_number
             ac_all_single[j,:] = ac_sum/(num_trials)
             
             ac_fit = ac_all_single[j,:]
-            xdata = lags[min_lag:fit_lag+1]
-            ydata = ac_fit[min_lag:fit_lag+1]/ac_fit[0]
 
             # estimating AC timescales
             selected_model_all[j], selected_tau = model_comp(ac_fit, lags, min_lag, fit_lag)
