@@ -1,23 +1,23 @@
 # Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks (2024)
 
-Codes for the implementation of the ICLR 2024 submission titled "Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks".
+Codes for the implementation of the ICLR 2024 paper titled "Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks".
 
-## Cite
-If you use this code, please cite the following paper:
+
+If you use this code for a scietific publication, please cite the paper:
+
+Khajehabdollahi*, S., Zeraati*, R., Giannakakis, E., Schäfer, T. J., Martius, G., & Levina, A. (2024). Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks. International Conference on Learning Representations (ICLR).
 
 ```
-@misc{khajehabdollahi2023emergent,
-      title={Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks}, 
-      author={Sina Khajehabdollahi and Roxana Zeraati and Emmanouil Giannakakis and Tim Jakob Schäfer and Georg Martius and Anna Levina},
-      year={2023},
-      eprint={2309.12927},
-      archivePrefix={arXiv},
-      primaryClass={cs.NE}
+@inproceedings{
+khajehabdollahi2024emergent,
+title={Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks},
+author={Sina Khajehabdollahi and Roxana Zeraati and Emmanouil Giannakakis and Tim Jakob Sch{\"a}fer and Georg Martius and Anna Levina},
+booktitle={International Conference on Learning Representations},
+year={2024},
+url={https://openreview.net/forum?id=xwKt6bUkXj}
 }
 ```
 
-## Contact
-If you have any questions, please contact us through the corresponding author or on github.
 
 ## Requirements
 - Python: 3.7.13
@@ -106,5 +106,8 @@ which takes the following arguments:
     N_min (int): minimum N, potentially depending on curriculum_type
 
 For example: ```load_model(curriculum_type='cumulative', task='parity', network_number=1, N_min=2, N_max=50)```
+
+## Contact
+If you have any questions, please contact through GitHub.
 
 
