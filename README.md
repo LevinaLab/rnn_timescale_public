@@ -1,6 +1,6 @@
 # Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks (2024)
 
-Codes for the implementation of the ICLR 2024 paper titled "Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks".
+Codes for the implementation of the ICLR 2024 paper titled ["Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks"][https://openreview.net/forum?id=xwKt6bUkXj].
 
 
 If you use this code for a scietific publication, please cite the paper:
