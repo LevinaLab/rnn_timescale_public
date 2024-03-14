@@ -107,6 +107,6 @@ which takes the following arguments:
 For example: ```load_model(curriculum_type='cumulative', task='parity', network_number=1, N_min=2, N_max=50)```
 
 ## Contact
-If you have any questions, please contact through GitHub.
+If you have any questions, please contact us through GitHub. 
 
 
