@@ -24,7 +24,7 @@ color_multi = '#489174'
 cm = 1 / 2.54
 fig, axs = plt.subplots(
     ncols=5,
-    figsize=(18*cm, 5*cm),
+    figsize=(18*cm, 4.7*cm),
     # sharey='all',
     constrained_layout=True
 )
@@ -217,7 +217,7 @@ fig.savefig(f'../../fig/plot_ablation_perturbation_retraining{epochs_retrained}.
 test_function = ttest_ind
 p_levels = np.array([0.05, 1e-2, 1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8, 1e-9, 1e-10])
 with open(f'../../results/p_values_retraining_{epochs_retrained}.txt', 'w') as f:
-    f.write('p-values licecompute as two-sided t-test (unpaired) between single-head and multi-head (4 networks each)\n')
+    f.write('p-values computed as two-sided t-test (unpaired) between single-head and multi-head (4 networks each)\n')
     f.write('\np-values for each perturbation of reccurent weights\n')
     for perturbation in df_rnn.index.get_level_values('perturbation').unique():
         t, p = test_function(
