@@ -91,6 +91,8 @@ if __name__ == '__main__':
     # todo: If n_total > n_slurm_nodes * max_jobs_per_node:
     #       allow for more cycles of subprocess launches, serially, after first batch is done.
     processes = []
+    os.environ['NUM_CORES'] = str(num_cores)
+    os.environ['NUM_JOBS_THIS_NODE'] = str(num_jobs_this_node)
     for param_id in range(start_index, end_index):
         os.environ['SUBPROC_ID'] = str(param_id)
         os.environ['PARAMS_ID'] = str(param_id)
