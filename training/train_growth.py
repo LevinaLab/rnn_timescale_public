@@ -184,8 +184,9 @@ if __name__ == '__main__':
     print("Duplicating: ", [k.replace('DUPLICATE_', '').lower()
      for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True])
 
-    print(f"Scheduling with Gamma={CONFIGS['GAMMA']}:", [k.replace('DUPLICATE_', '').lower()
-     for k, v in CONFIGS.items() if k.startswith('DUPLICATE_') and v is True])
+    print(f"Scheduling with Gamma={CONFIGS['GAMMA']}:", [k.replace('SCHEDULE_', '').lower()
+     for k, v in CONFIGS.items() if k.startswith('SCHEDULE_') and v is True])
+
     SEED = CONFIGS["SEED"]
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
@@ -222,6 +223,7 @@ if __name__ == '__main__':
     BASE_PATH = slurm.get_log_dir(results_dir=os.path.join(project_root, 'trained_models'))
     print(f"Logging results to: {BASE_PATH}", flush=True)
     env_vars = slurm.get_env_vars()
+    CONFIGS.update(env_vars)
     # BASE_PATH = os.path.join(project_root, 'trained_models')
     subdir = generate_subdir(configs=CONFIGS,
                              base_path=BASE_PATH,
@@ -231,13 +233,6 @@ if __name__ == '__main__':
     commit_hash, files_modified = report_git_status(os.path.join(subdir, "git_report_log.txt"))
     CONFIGS['COMMIT_HASH'] = commit_hash
     CONFIGS['FILES_MODIFIED'] = files_modified
-
-    CONFIGS['TAUS_NOISE'] = CONFIGS['WEIGHT_NOISE']
-    CONFIGS['BIAS_NOISE'] = CONFIGS['WEIGHT_NOISE']
-    CONFIGS['DUPLICATE_TAUS'] = CONFIGS['DUPLICATE_W_HH']
-
-    CONFIGS['DUPLICATE_W_HH'] = CONFIGS['DUPLICATE_INPUT_LAYERS']
-    CONFIGS['DUPLICATE_W_FF_IN'] = CONFIGS['DUPLICATE_INPUT_LAYERS']
 
     save_configs(subdir, CONFIGS)
 
