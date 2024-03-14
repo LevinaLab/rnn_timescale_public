@@ -4,6 +4,7 @@ Codes for the implementation of the ICLR 2024 paper titled "Emergent mechanisms 
 
 
 If you use this code for a scietific publication, please cite the paper:
+
 Khajehabdollahi*, S., Zeraati*, R., Giannakakis, E., Schäfer, T. J., Martius, G., & Levina, A. (2024). Emergent mechanisms for long timescales depend on training curriculum and affect performance in memory tasks. International Conference on Learning Representations (ICLR).
 
 ```
