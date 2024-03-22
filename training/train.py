@@ -14,7 +14,7 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 
-from src.models import RNN_Stack, RNN_Mod
+from src.models import RNN_Stack, RNN_Mod, RNN_Sparse
 import src.tasks as tasks
 from src.utils import save_model
 
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument('-ni', '--ns_init', type=int, dest='ns_init',
                         help='The starting value of N for the task. (int)')
     parser.add_argument('-m', '--model_type', type=str, dest='model_type',
-                        help='Model types: (default, mod). (str)')
+                        help='Model types: (default, mod, sparse). (str)')
     parser.add_argument('-a', '--afunc', type=str, dest='afunc',
                         help='Acitvation functions: (leakyrelu, relu, tanh, sigmoid). (str)')
     parser.add_argument('-c', '--curriculum_type', type=str, dest='curriculum_type',
@@ -162,6 +162,8 @@ if __name__ == '__main__':
                         help='Number of heads to add per new curricula. (int)')
     parser.add_argument('-fh', '--forget_heads', type=int, dest='forget_heads',
                         help='Number of heads to forget for the sliding window curriculum type. (int)')
+    parser.add_argument('-st', '--sparsity_threshold', type=int, dest='sparsity_threshold',
+                        help='Threshold value for sparsity mask initialization. (float=0.)')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed. (int)')
 
@@ -176,7 +178,8 @@ if __name__ == '__main__':
         init_heads=1,
         add_heads=1,
         forget_heads=1,
-        seed=np.random.choice(2 ** 32),
+        sparsity_threshold=0.9,
+        seed=np.random.choice(2 ** 31 - 1),
     )
 
     # Parse the command-line arguments
@@ -304,6 +307,26 @@ if __name__ == '__main__':
         ).to(device)
 
         rnn.to(device)
+    elif MODEL == 'sparse':
+
+        SPARSITY_THRESHOLD = args.sparsity_threshold
+
+        AFFIXES += ['sparse']
+        if NUM_NEURONS != 500:
+            AFFIXES += ['size', str(NUM_NEURONS)]
+        if args.tau is not None:
+            AFFIXES += ['T', str(TAU)]
+        rnn = RNN_Sparse(
+            input_size=INPUT_SIZE,
+            net_size=NET_SIZE,
+            num_classes=NUM_CLASSES,
+            bias=BIAS,
+            num_readout_heads=NUM_READOUT_HEADS,
+            tau=TAU,
+            train_tau=TRAIN_TAU,
+            sparsity_threshold=SPARSITY_THRESHOLD,
+        ).to(device)
+
     else:
         print('Unrecognized model type: ', MODEL)
 

@@ -5,8 +5,11 @@ __all__ = [
     'RNN_Mod',
     'RNN_Continuous',
     'init_model_continuous',
+    'RNN_Sparse',
+    'init_model_sparse',
 ]
 
 from .RNN_Stack import init_model, RNN_Stack
 from .RNN_modified import init_model_mod, RNN_Mod
 from .RNN_Continuous import RNN_Continuous, init_model_continuous
+from .RNN_Sparse import RNN_Sparse, init_model_sparse

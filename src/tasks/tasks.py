@@ -10,6 +10,14 @@ def generate_binary_sequence(M, balanced=False):
         # doesn't seem to have the same effect for nbit-parity
         return (torch.rand(M) < torch.rand(1)) * 1.
 
+def batched_generate_binary_sequence(M, BS, balanced=False):
+    if balanced:
+        # for dms if the input sequence is correlated it'll make one class very likely
+        return (torch.rand(BS, M) < 0.5) * 1.
+    else:
+        # doesn't seem to have the same effect for nbit-parity
+        return (torch.rand(BS, M) < torch.rand(1)) * 1.
+
 # Experiments (not included in paper) with sparse sequences
 def generate_sparse_binary_sequence(M, sparsity=0.9):
     s = torch.rand(M) * 2 - 1
@@ -17,27 +25,45 @@ def generate_sparse_binary_sequence(M, sparsity=0.9):
     return s * 1.
 
 
-
 ############ N_PARITY TASKS ##############
 
 def get_parity(vec, N):
     return (vec[-N:].sum() % 2).long()
+
+def get_batched_parity(mat, N):
+    """
+
+    Parameters
+    ----------
+    mat: [torch.Tensor: BATCH_SIZE x TIME]
+    N: how many steps back it needs to remember in order to check for parity
+
+    Returns
+    -------
+
+    """
+    return (mat[:, -N:].squeeze().sum(dim=1) % 2).long()
+
 
 def make_batch_Nbit_pair_parity(Ns, bs, duplicate=1, classify_in_time=False):
     M_min = Ns[-1] + 2
     M_max = M_min + 3 * Ns[-1]
     M = np.random.randint(M_min, M_max)
     with torch.no_grad():
-        sequences = [generate_binary_sequence(M).unsqueeze(-1) for i in range(bs)]
+        # sequences = [generate_binary_sequence(M).unsqueeze(-1) for i in range(bs)]
+        sequences = batched_generate_binary_sequence(M, bs).unsqueeze(-1)
         if classify_in_time:
             if duplicate != 1:
                 raise NotImplementedError
             labels = [torch.stack([get_parity_in_time(s, N) for s in sequences]) for N in Ns]
         else:
-            labels = [torch.stack([get_parity(s, N) for s in sequences]) for N in Ns]
+            # labels = [torch.stack([get_parity(s, N) for s in sequences]) for N in Ns]
+            labels = [get_batched_parity(sequences, N) for N in Ns]
         # in each sequence of length M, duplicate each bit (duplicate) times
-        sequences = [torch.repeat_interleave(s, duplicate, dim=0) for s in sequences]
-        sequences = torch.stack(sequences)
+        if duplicate != 1:
+            sequences = [torch.repeat_interleave(s, duplicate, dim=0) for s in sequences]
+            sequences = torch.stack(sequences)
+
         sequences = sequences.permute(1, 0, 2)
     return sequences, labels
 
