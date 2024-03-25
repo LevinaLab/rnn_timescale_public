@@ -162,7 +162,7 @@ if __name__ == '__main__':
                         help='Number of heads to add per new curricula. (int)')
     parser.add_argument('-fh', '--forget_heads', type=int, dest='forget_heads',
                         help='Number of heads to forget for the sliding window curriculum type. (int)')
-    parser.add_argument('-st', '--sparsity_threshold', type=int, dest='sparsity_threshold',
+    parser.add_argument('-st', '--sparsity_threshold', type=float, dest='sparsity_threshold',
                         help='Threshold value for sparsity mask initialization. (float=0.)')
     parser.add_argument('-s', '--seed', type=int, dest='seed',
                         help='Random seed. (int)')
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         init_heads=1,
         add_heads=1,
         forget_heads=1,
-        sparsity_threshold=0.9,
+        sparsity_threshold=0.,
         seed=np.random.choice(2 ** 31 - 1),
     )
 
@@ -252,11 +252,12 @@ if __name__ == '__main__':
     BIAS = True
     NUM_READOUT_HEADS = 100
     TRAIN_TAU = True
+    SPARSITY_THRESHOLD = 0.  # changed by arguements for sparse models
 
     # TRAINING PARAMS
     NUM_EPOCHS = 1000
     BATCH_SIZE = 256
-    TRAINING_STEPS = 600
+    TRAINING_STEPS = 500
     TEST_STEPS = 50
     CRITERION = nn.CrossEntropyLoss()
     device = 'cuda'
@@ -331,7 +332,7 @@ if __name__ == '__main__':
         print('Unrecognized model type: ', MODEL)
 
     # SGD Optimizer
-    learning_rate = 0.05
+    learning_rate = 1.1 / np.sqrt(NUM_NEURONS * np.sqrt(SPARSITY_THRESHOLD + 1e-6)) # 0.05
     momentum = 0.1
     OPTIMIZER = torch.optim.SGD(rnn.parameters(), lr=learning_rate, momentum=momentum, nesterov=True)
 
