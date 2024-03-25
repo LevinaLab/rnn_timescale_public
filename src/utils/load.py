@@ -18,7 +18,8 @@ def load_model(
         n_forget: int = 1,
         continuous_model=False,
         mod_afunc=nn.LeakyReLU,
-        num_classes=2,
+        num_classes: int = 2,
+        num_neurons: int = 500,
         affixes=[],
 ):
     """Load the RNNs for the given type and network_name.
@@ -53,12 +54,12 @@ def load_model(
     if mod_model:
         assert not continuous_model, ("Cannot have both mod_model and continuous_model,"
                                       " continuous_model is implicitly mod_model")
-        rnn = init_model_mod(A_FUNC=mod_afunc, NUM_CLASSES=num_classes, DEVICE=device)
+        rnn = init_model_mod(A_FUNC=mod_afunc, NET_SIZE=[num_neurons], NUM_CLASSES=num_classes, DEVICE=device)
     else:
         if continuous_model:
             rnn = init_model_continuous(DEVICE=device)
         else:
-            rnn = init_model(NUM_CLASSES=num_classes, DEVICE=device)
+            rnn = init_model(NET_SIZE=[num_neurons], NUM_CLASSES=num_classes, DEVICE=device)
     rnn.load_state_dict(torch.load(rnn_path, map_location=device)['state_dict'], strict = strict)
     return rnn
 

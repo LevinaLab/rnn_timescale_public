@@ -14,7 +14,8 @@ import sys
 sys.path.append('../../')
 from src.utils import load_model
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = 'cpu'
 
 
 def generate_binary_sequence(M):
@@ -317,9 +318,9 @@ def comp_acs(device, data_path, save_path, curriculum_type, task, network_number
         # loading the model
         print('N = ', N)
         rnn = load_model(curriculum_type = curriculum_type, task = task, network_number = network_number,
-                         N_max = N, N_min = N_min, num_classes=num_classes,
+                         N_max = N, N_min = N_min, num_classes=num_classes, num_neurons=num_neurons,
                          device=device, base_path = data_path, strict = strict,
-                         mod_model = mod_model, mod_afunc = mod_afunc, affixes = affixes)
+                         mod_model = mod_model, mod_afunc = mod_afunc, affixes = affixes).to(device)
         trained_taus = rnn.taus[0].cpu().detach().numpy() # trained taus
             
         # simulating the model activity using random binary inputs
